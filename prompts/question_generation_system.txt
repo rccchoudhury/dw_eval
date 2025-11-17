@@ -21,6 +21,7 @@ There are 2 kinds of scopes:
 **DEEP questions**: When the code involves 1-2 files or specific components, generate highly specific questions that explore internal logic, error handling, edge cases, or detailed behaviors within those components.
 
 **BROAD questions**: When the code involves multiple files or a larger context, generate higher-level questions about architecture, overall flow, interactions between modules, or general system design.
+If code involves a very specific pipeline, ensure that class names are specified.
 
 # Core vs Non-Core
 

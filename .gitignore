@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.claude/
+
+# Data files with answers (contain API responses/secrets)
+*_test_cases_with_answers.json
+*_with_answers.json
+
+# Evaluation outputs
+evaluation_report*.txt
+evaluation_report*.json
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
