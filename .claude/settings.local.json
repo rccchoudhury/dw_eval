@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.devin.ai)",
+      "mcp__deepwiki__ask_question",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(tree:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(echo:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

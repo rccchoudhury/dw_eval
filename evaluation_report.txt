@@ -1,0 +1,823 @@
+================================================================================
+EVALUATION REPORT (Claude API Evaluation)
+================================================================================
+
+OVERALL STATISTICS
+--------------------------------------------------------------------------------
+Total test cases: 69
+Completed: 9
+Errors: 60
+
+Average Score: 0.339 (normalized)
+Average Raw Score: 13.6/40
+
+Component Scores (0-10 scale):
+  Factual Correctness (2x weight): 3.56
+  Fact Coverage (1x weight): 2.11
+  Specificity (1x weight): 4.33
+
+Average Facts Covered: 3.2
+
+BEST AND WORST SCORING QUESTIONS
+--------------------------------------------------------------------------------
+
+TOP 2 BEST SCORES:
+
+#1 - Score: 0.675 [27/40]
+    Factual=7.0, Coverage=6.0, Specificity=7.0
+    Question: How does the text encoding process differ between the T5 encoder forward pass and the transformer forward pass in terms of attention masking?
+    Analysis: The system answer correctly identifies the general difference between T5 encoder and transformer attention masking approaches and provides specific file references. However, it omits the precise techn...
+
+#2 - Score: 0.525 [21/40]
+    Factual=6.0, Coverage=4.0, Specificity=5.0
+    Question: How does the modular pipeline handle memory availability checks when enabling CPU offload, and what happens if memory information cannot be obtained for a given device?
+    Analysis: The system answer demonstrates partial understanding of the memory handling mechanism but contains significant gaps and misattributions. It correctly identifies that memory is checked via device_modul...
+
+TOP 2 WORST SCORES:
+
+#1 - Score: 0.150 [6/40]
+    Factual=1.0, Coverage=0.0, Specificity=4.0
+    Question: How does the rotary position embedding generation differ when processing exactly 2 frames versus a larger number of frames?
+    Analysis: The system answer is fundamentally incorrect as it discusses an entirely different codebase (CogVideoX pipelines) instead of ChronoEdit's rotary position embeddings. It covers zero of the pertinent fa...
+
+#2 - Score: 0.225 [9/40]
+    Factual=2.0, Coverage=1.0, Specificity=4.0
+    Question: How does the face adapter integrate its output with the main transformer hidden states during video generation?
+    Analysis: The system answer is fundamentally incorrect. It describes an entirely different architecture (ConsisIDTransformer3DModel) rather than the WanAnimateTransformer3DModel specified in the ground truth. W...
+
+
+BREAKDOWN BY DIFFICULTY
+--------------------------------------------------------------------------------
+Moderate: 1 cases - Avg Score: 0.525
+Hard: 8 cases - Avg Score: 0.316
+
+BREAKDOWN BY TYPE
+--------------------------------------------------------------------------------
+open_question: 9 cases - Avg Score: 0.339
+
+BREAKDOWN BY SCOPE
+--------------------------------------------------------------------------------
+broad: 1 cases - Avg Score: 0.325
+deep: 8 cases - Avg Score: 0.341
+
+INDIVIDUAL TEST CASE RESULTS
+================================================================================
+
+[1/69] Score: 0.150 [6/40]
+  Factual=1.0/10, Coverage=0.0/10, Specificity=4.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the rotary position embedding generation differ when processing exactly 2 frames versus a larger number of frames?
+
+Facts Covered: 0/4
+
+Analysis: The system answer is fundamentally incorrect as it discusses an entirely different codebase (CogVideoX pipelines) instead of ChronoEdit's rotary position embeddings. It covers zero of the pertinent facts about ChronoEditRotaryPosEmbed, the [[0, -1]] indexing strategy, or the special handling for 2 frames. While the answer provides specific code references, they are all from the wrong architectural context, making them irrelevant to the actual question asked.
+--------------------------------------------------------------------------------
+
+[2/69] Score: 0.375 [15/40]
+  Factual=5.0/10, Coverage=3.0/10, Specificity=2.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the latents initialization logic handle the case when latents are provided as input versus when they need to be generated?
+
+Facts Covered: 4/5
+
+Analysis: The system answer provides generally accurate information about how latents initialization typically works in diffusion pipelines, but it addresses the wrong implementation entirely. It discusses a `prepare_latents` method pattern across various pipelines rather than the specific `QwenImageBeforeDenoiseBlock.__call__` implementation mentioned in the ground truth. The answer misses critical facts including the specific class, file path, the block_state.latents None check, and the pack_latents method call, while introducing irrelevant inpainting-specific logic.
+--------------------------------------------------------------------------------
+
+[3/69] Score: 0.275 [11/40]
+  Factual=3.0/10, Coverage=1.0/10, Specificity=4.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the transformer model incorporate temporal information when processing video latents during the denoising loop?
+
+Facts Covered: 3/3
+
+Analysis: The system answer provides a general overview of temporal information handling in video transformers within diffusers, but fundamentally fails to address the specific question about SanaVideoTransformer3DModel. The answer discusses entirely different transformer models (CogVideoX, ConsisID, LTX) and mechanisms (LTXVideoRotaryPosEmbed, TransformerTemporalModel) instead of the core components mentioned in the ground truth (WanRotaryPosEmbed, GLUMBTempConv with (3,1) kernel). None of the three core facts about the specific temporal mechanisms are adequately covered.
+--------------------------------------------------------------------------------
+
+[4/69] Score: 0.525 [21/40]
+  Factual=6.0/10, Coverage=4.0/10, Specificity=5.0/10
+Difficulty: moderate | Type: open_question | Scope: deep
+
+Question: How does the modular pipeline handle memory availability checks when enabling CPU offload, and what happens if memory information cannot be obtained for a given device?
+
+Facts Covered: 4/3
+
+Analysis: The system answer demonstrates partial understanding of the memory handling mechanism but contains significant gaps and misattributions. It correctly identifies that memory is checked via device_module.mem_get_info() but fails to specify the precise location (ComponentsManager.__call__), misattributes logic to AutoOffloadStrategy instead of ComponentsManager, and entirely omits the TODO comment detail about warning handling. The answer provides reasonable general concepts but lacks the specificity and accuracy required for a technical codebase question.
+--------------------------------------------------------------------------------
+
+[5/69] Score: 0.225 [9/40]
+  Factual=2.0/10, Coverage=1.0/10, Specificity=4.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: What specific condition causes the AITER flash attention implementation to force return_lse to True even when the caller requests it to be False?
+
+Facts Covered: 3/3
+
+Analysis: The system answer is substantially incorrect and appears to confuse AITER flash attention with a different context-parallel attention mechanism. It identifies the wrong function name (_flash_attention_forward_op instead of _aiter_flash_attention), introduces irrelevant concepts like ring attention and context parallelism, and fails to address the core condition of torch.is_grad_enabled(). The answer does not cover the pertinent facts about why AITER requires return_lse=True or how the function handles discarding LSE values when returning.
+--------------------------------------------------------------------------------
+
+[6/69] Score: 0.275 [11/40]
+  Factual=3.0/10, Coverage=1.0/10, Specificity=4.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the text encoder's output get transformed before being fed into the transformer blocks?
+
+Facts Covered: 3/6
+
+Analysis: The system answer is fundamentally flawed because it completely ignores the specific model asked about (BriaFibo) and instead provides extensive information about unrelated transformer models. While the information about other models appears factually correct, it is entirely irrelevant to the question. The answer covers almost none of the pertinent core facts about how BriaFibo's text encoder output is transformed, representing a critical failure in answering the specific technical question asked.
+--------------------------------------------------------------------------------
+
+[7/69] Score: 0.225 [9/40]
+  Factual=2.0/10, Coverage=1.0/10, Specificity=4.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the face adapter integrate its output with the main transformer hidden states during video generation?
+
+Facts Covered: 3/3
+
+Analysis: The system answer is fundamentally incorrect. It describes an entirely different architecture (ConsisIDTransformer3DModel) rather than the WanAnimateTransformer3DModel specified in the ground truth. While the answer contains some correct general concepts (residual addition of face features, conditional application), it fails to reference the correct file, class, method, injection frequency parameter, or specific code pattern. The answer appears to be a hallucination that conflates multiple different face adapter implementations into a single response.
+--------------------------------------------------------------------------------
+
+[8/69] Score: 0.325 [13/40]
+  Factual=3.0/10, Coverage=2.0/10, Specificity=5.0/10
+Difficulty: hard | Type: open_question | Scope: broad
+
+Question: How does the text-to-video pipeline handle dual text encoding from different language models before feeding the embeddings into the transformer?
+
+Facts Covered: 4/4
+
+Analysis: The system answer describes a dual text encoding pipeline with reasonable technical accuracy for the HunyuanVideo system, but it fundamentally answers the wrong question. The ground truth specifically asks about Kandinsky5T2VPipeline with Qwen2.5-VL and CLIP encoders, while the system describes HunyuanVideoPipeline with LlamaModel and CLIPTextModel instead. While the general architecture pattern is similar, the specific implementations, file paths, and transformer configuration (in_text_dim parameters) are entirely different, making this answer incorrect for the stated question.
+--------------------------------------------------------------------------------
+
+[9/69] Score: 0.675 [27/40]
+  Factual=7.0/10, Coverage=6.0/10, Specificity=7.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the text encoding process differ between the T5 encoder forward pass and the transformer forward pass in terms of attention masking?
+
+Facts Covered: 5/5
+
+Analysis: The system answer correctly identifies the general difference between T5 encoder and transformer attention masking approaches and provides specific file references. However, it omits the precise technical implementation details (torch.arange, the specific formula, the 'one position beyond' extension), and conflates the T5 encoder's direct use of tokenizer_mask_device with the Chroma pipeline's modifications without clearly distinguishing these as separate steps in the forward pass. The answer provides helpful context but misses key specifics from the ground truth.
+--------------------------------------------------------------------------------
+
+[10/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the model handle visual conditioning when preparing latent variables for video generation?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[11/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the newly introduced abstraction handle situations where certain model subclasses don't implement a particular memory optimization feature?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[12/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: broad
+
+Question: How does the text encoder component integrate with the pipeline during prompt encoding, and what preprocessing happens to the prompt text before tokenization?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[13/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the RoPE input preparation differ between the standard model and its Kontext variant when an input image is provided?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[14/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the pipeline compute the positional embeddings needed for rotary position encoding (RoPE) in the transformer?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[15/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the image preprocessing strategy differ between the standard edit variant and the plus variant when preparing images for the VAE encoder?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[16/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: What HTTP client libraries are now supported for handling connection errors when downloading model files, and which specific exceptions are caught for each?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[17/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the denoising loop handle condition video frames during the diffusion process?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[18/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the system prevent race conditions when multiple concurrent requests need to configure schedulers with different timestep settings?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[19/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the pipeline combine masked image information with control conditioning for the inpainting controlnet?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[20/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the configuration handle AOBaseConfig instances versus string identifiers during initialization?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[21/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the inpainting pipeline combine the denoised latents with the original masked image during the denoising loop?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[22/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: In what scenarios does the QwenImage pipeline enable classifier-free guidance during inference, and what warnings are issued when the configuration is inconsistent?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[23/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: broad
+
+Question: How does the QwenImage pipeline handle both image‐to‐image and inpainting tasks using a single modular pipeline structure, and what mechanism determines which processing blocks are activated for each task?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[24/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the controlnet conditioning get injected into the latent space during the forward pass?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[25/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: broad
+
+Question: How does the codebase handle setting a custom attention backend for the transformer model when NPU flash attention is requested?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[26/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the image processor initialization handle kwargs passed through the from_dict method, and which kwargs are filtered before instantiation?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[27/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the convolution bias configuration from the encoder settings propagate into the individual convolutional layers of the conformer's convolution module?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[28/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the vision transformer class enable recording of hidden states and attention outputs during forward passes?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[29/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the workflow determine the base commit to compare against when checking for new test failures in a pull request scenario versus a scheduled run?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[30/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the validation logic in the configuration class ensure compatibility between forward and backward data type selections?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[31/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: Why must encoder_hidden_states be passed as a positional argument rather than a keyword argument when invoking the block's forward method in models using gradient checkpointing?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[32/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the fast image processor avoid resizing images that are already smaller than the target dimensions?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[33/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the decoder layer selection mechanism determine which attention mask type to apply during the forward pass in hybrid attention-state-space models?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[34/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: What validation pattern is used across the Qwen3-Omni model family to ensure RoPE configuration consistency, and which keys are excluded from this validation?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[35/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: Why might certain attribute accesses on a vision-language model configuration be delegated to its text configuration subcomponent, and which attributes need to be explicitly excluded from this delegation to preserve correct model identification?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[36/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the encoder now handle both causal and non-causal attention for text versus image modalities?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[37/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the fast variant handle resizing images to ensure dimensions are compatible with downstream processing requirements?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[38/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: What data structure and naming convention are used when uploading benchmark run results to the Hub, and how are multiple benchmark entries combined before upload?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[39/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: In the expert routing mechanism, how is the separation between routing decisions and gating values maintained when using the bias correction term?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[40/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: What happens if you call apply_chat_template with tokenize=False and return_dict=True together?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[41/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the updated eager attention mechanism apply masking before computing attention probabilities?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[42/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the encoder-decoder cache class handle initialization when provided with DDP-compatible cache data containing sliding window tensors?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[43/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: When flash attention is invoked with float32 queries, how does the system determine which dtype to cast them to before the forward pass?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[44/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the refactored kernel loading approach handle the scenario where a requested kernel is not found in the hub mapping?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[45/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the create_causal_mask_mapping method handle image group identification for tokens that are not part of an image?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[46/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: When interpolating positional embeddings for vision patches, which input tensor's device is used to ensure tensor consistency across distributed training scenarios?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[47/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the new video processor maintain output compatibility with the existing image-based processor?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[48/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the training loop determine the effective batch size when averaging tokens across devices versus using data parallelism?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[49/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the AST-based approach extract function arguments while excluding self, *args, and **kwargs parameters?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[50/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the continuous batching processor determine the padded sizes for query tokens and key-value cache when using CUDA graphs?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[51/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the BNB quantizer determine the actual module and tensor name when loading a pre-quantized checkpoint that contains quantized statistics like absmax or quant_map?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[52/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: moderate | Type: open_question | Scope: deep
+
+Question: How does the new benchmarking framework determine which SDPA backend to use when a config specifies SDPA attention but leaves the backend unspecified?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[53/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the routing mechanism decide which experts to activate in the sparse MoE block, and what role does the expert bias play when it's enabled?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[54/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the fast processor handle batch inputs differently from single image pairs when preprocessing images?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[55/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: moderate | Type: open_question | Scope: deep
+
+Question: How does the fast sampling mode reduce computation when determining block sparsity patterns?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[56/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the block sparsity validation logic ensure that count and index tensors have matching batch and head dimensions when they may initially have singleton dimensions?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[57/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How are the four separate block sparsity tensor parameters consolidated into a single structure when converting from PyTorch to CUTE representations?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[58/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: After the changes, what parameter name is used to pass auxiliary tensors (like document IDs) to FlexAttention's score_mod and mask_mod functions in the CuTe DSL implementation?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[59/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the backward kernel allocate and manage TMEM (Tensor Memory) resources across different stages of computation?
+
+Facts Covered: 0/3
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[60/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the build system determine whether to define the HIPIFY_V2 preprocessor macro during compilation?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[61/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the block sparsity mainloop iteration differ between partially-masked and fully-computed blocks when intra-warpgroup overlap is enabled?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[62/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the system decide to use multiple splits when performing forward attention calculations with num_splits set to a negative value?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[63/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the implementation ensure that score modification functions receive logical query indices rather than physical packed indices when grouped-query attention packing is enabled?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[64/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the main backward kernel determine which tiles are valid to process when variable-length sequences are enabled?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[65/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the backward scheduler determine the order of processing memory blocks when causal masking and determinism are both enabled?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[66/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the softmax implementation support serialization and reconstruction of non-constexpr state for the JIT compilation process?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[67/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the backward kernel compute the gradient with respect to queries (dQ) in the SM90 implementation?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[68/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the attention score modification framework handle the difference in how indices are represented between the softmax computation stages?
+
+Facts Covered: 0/5
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------
+
+[69/69] Score: 0.000 [0/40]
+  Factual=0.0/10, Coverage=0.0/10, Specificity=0.0/10
+Difficulty: hard | Type: open_question | Scope: deep
+
+Question: How does the prepare kernel determine the number of splits for each batch when dynamic splitting is enabled?
+
+Facts Covered: 0/4
+
+Analysis: No system answer provided
+--------------------------------------------------------------------------------

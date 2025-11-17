@@ -1,0 +1,64 @@
+You are helping build a high-quality dataset of real-world codebase questions to test our search AI agents. Each question should require the agent to search through the codebase to find the relevant code.
+
+# Guidelines
+
+Your task is to generate 1 onboarding question adhering to these guidelines:
+
+- The question must be clearly grounded in the provided code context.
+- Do not include exact file paths, line numbers, or raw code snippets in the question text.
+- Prefer questions involving relationships across multiple functions, components, or files.
+- Keep the wording concise, clear, and readable.
+- Avoid vague references to code elements like 'the function' or 'that class'.
+- Don't make identifier references (function names, class names, variables, etc.) too obvious, so that the search will be as challenging as possible.
+- Despite the above, the question should still be answerable, and the context should be unambiguous.
+- The question should be answerable with a short, concise response—ideally 2-3 sentences maximum.
+- The question should ask just one concept, rather than being too complex and multi-part.
+
+# Scopes
+
+There are 2 kinds of scopes:
+
+**DEEP questions**: When the code involves 1-2 files or specific components, generate highly specific questions that explore internal logic, error handling, edge cases, or detailed behaviors within those components.
+
+**BROAD questions**: When the code involves multiple files or a larger context, generate higher-level questions about architecture, overall flow, interactions between modules, or general system design.
+
+# Core vs Non-Core
+
+**Core questions**: Target fundamental, core functionality that developers need to understand to work with this part of the codebase.
+
+**Non-core questions**: Focus on peripheral technical aspects, edge cases, or optimization details.
+
+Aim for a mix of both, but prioritize core questions.
+
+# Important
+
+Use the PR title and description to infer the high-level subject area. Think of questions that a developer would need to answer to understand this part of the codebase. The questions must be answerable using the provided code context.
+
+Do NOT ask questions about the PR itself, and change histories. Questions should be answerable from looking at the code only, not the PR.
+
+Questions should NOT be too long and also NOT be too simple. This is crucial and if you don't do this right, my grandmother will die.
+Answers MUST reference code files and class names wherever possible rather than being vague, using the input context.
+
+# Examples
+
+**Broad question examples:**
+- What is the general workflow for training and deploying a transformer-based language model?
+- Can you describe the internal steps involved in performing hyperparameter tuning with a grid search?
+- What's the end-to-end flow involved in generating images using diffusion-based models?
+
+**Deep question examples:**
+- How are gradient updates managed when training gradient-boosted decision trees on sparse data?
+- Which parameter directly controls the number of leaves permitted in each decision tree of a gradient boosting algorithm?
+- How does a functional deep learning API internally handle merging layers with multiple input tensors?
+
+**Core question examples:**
+- How are token and positional embeddings combined and fed into the BERT model?
+- How does the Keras Layer base class manage weight creation and the build/call lifecycle?
+- What happens in one XGBoost boosting iteration—how are new trees grown and combined?
+
+Answer examples:
+Question: What default value is used for the beta attribute if the config does not define it?"
+Answer: In ChameleonVQVAEVectorQuantizer.__init__ (src/transformers/models/chameleon/modeling_chameleon.py), `beta` falls back to 0.25 if it\u2019s not defined on the config."
+
+Question: How does the forward method convert encoder output into the decoder\u2019s initial query embeddings and reference points?
+Answer: In RTDetrModel.forward (src/transformers/models/rt_detr/modeling_rt_detr.py) the encoder\u2019s flattened output is first passed through enc_score_head (and enc_bbox_head+anchors) to get per\u2010query class scores and un\u2010activated box logits. We then:\n\n\u2022 call torch.topk on the max class scores to pick the top num_queries indices  \n\u2022 use those indices to gather \u201cregion features\u201d from the encoded memory (or, if config.learn_initial_query=True, tile a learned weight_embedding) to form the decoder\u2019s initial inputs_embeds (\u201ctarget\u201d)  \n\u2022 similarly gather the corresponding un\u2010activated box logits as reference_points_unact, take sigmoid for normalized boxes, and detach to form init_reference_points  \n\nFinally, we call self.decoder( inputs_embeds=target, reference_points=init_reference_points, \u2026 ) so the decoder starts from those learned query embeddings and reference points.

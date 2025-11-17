@@ -1,0 +1,29 @@
+
+# PR Information
+
+**Title**: {title}
+**PR Number**: {pr_number}
+**Description**: {body}
+
+# Code Context
+
+{files_content}
+
+---
+
+# Your Decision
+
+Analyze the PR and determine if it's suitable for question generation.
+
+Return your response as JSON:
+```json
+{{
+  "accept": true|false,
+  "reasoning": "<1-2 sentences explaining why you accepted or rejected this PR>",
+  "substance_level": "high|medium|low"
+}}
+```
+
+- `accept`: true if suitable for questions, false otherwise
+- `reasoning`: Brief explanation of your decision
+- `substance_level`: Your assessment of how much technical substance this PR contains

@@ -1,0 +1,736 @@
+[
+  {
+    "question": "Under what condition does the collate function use the feature extractor\u2019s padding value for input IDs instead of the tokenizer\u2019s?",
+    "answer": "In `pad_collate_fn.inner` (src/transformers/pipelines/base.py), for the `\"input_ids\"` key it does:\n\n\u2010 if `tokenizer is None` and `feature_extractor is not None`,  \n\u2003use the feature extractor\u2019s padding value (`f_padding_value`),  \notherwise it falls back to the tokenizer\u2019s padding value (`t_padding_value`).",
+    "facts": [
+      "The function pad_collate_fn.inner is defined in src/transformers/pipelines/base.py.",
+      "pad_collate_fn.inner handles the `\"input_ids\"` key.",
+      "If tokenizer is None and feature_extractor is not None, pad_collate_fn.inner uses the feature extractor\u2019s padding value (f_padding_value).",
+      "Otherwise, pad_collate_fn.inner uses the tokenizer\u2019s padding value (t_padding_value)."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 3
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 3,
+      "n_files_pr": 3,
+      "pr": 16871,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "0fbd5b3c-87d4-4894-9319-d979c2f45997"
+  },
+  {
+    "question": "What scaling factor is applied to the feature map dimensions when removing keypoints near image borders?",
+    "answer": "In   SuperPointInterestPointDecoder._extract_keypoints  (src/transformers/models/superpoint/modeling_superpoint.py), when calling  remove_keypoints_from_borders  you pass  height * 8  and  width * 8  \u2013 i.e. a scaling factor of 8.",
+    "facts": [
+      "The function SuperPointInterestPointDecoder._extract_keypoints is defined in src/transformers/models/superpoint/modeling_superpoint.py.",
+      "The function SuperPointInterestPointDecoder._extract_keypoints calls remove_keypoints_from_borders.",
+      "The call to remove_keypoints_from_borders includes height * 8 as an argument.",
+      "The call to remove_keypoints_from_borders includes width * 8 as an argument.",
+      "The scaling factor used in the call to remove_keypoints_from_borders is 8."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 2
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 2,
+      "n_files_pr": 19,
+      "pr": 31718,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "87bc9852-629a-440c-997c-597dfddc6731"
+  },
+  {
+    "question": "Which internal attribute disables fast parameter buffer assignment by default in the GPT2 model?",
+    "answer": "In `src/transformers/models/gpt2/modeling_gpt2.py`, the class attribute  \n  GPT2Model._supports_param_buffer_assignment  \nis set to `False`, disabling fast parameter buffer assignment by default.",
+    "facts": [
+      "The file src/transformers/models/gpt2/modeling_gpt2.py contains the class attribute GPT2Model._supports_param_buffer_assignment.",
+      "The class attribute GPT2Model._supports_param_buffer_assignment is set to False.",
+      "Fast parameter buffer assignment is disabled by default."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 34031,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "8dad90f3-8c63-4bbe-955b-0c286f3af679"
+  },
+  {
+    "question": "In the model's forward pass, how is the dtype of the input padding mask determined?",
+    "answer": "In `VitsModel.forward` (src/transformers/models/vits/modeling_vits.py), it does:\n\n\u2022 mask_dtype = self.text_encoder.embed_tokens.weight.dtype  \n\u2022 then casts `attention_mask` (or a tensor of ones) via `.to(mask_dtype)`\n\nSo the padding\u2010mask dtype is taken from `text_encoder.embed_tokens.weight.dtype`.",
+    "facts": [
+      "VitsModel.forward is defined in src/transformers/models/vits/modeling_vits.py.",
+      "VitsModel.forward sets mask_dtype equal to self.text_encoder.embed_tokens.weight.dtype.",
+      "VitsModel.forward casts the attention_mask tensor using .to(mask_dtype).",
+      "VitsModel.forward casts a tensor of ones using .to(mask_dtype).",
+      "The padding\u2010mask dtype is taken from text_encoder.embed_tokens.weight.dtype."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 2
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 2,
+      "n_files_pr": 2,
+      "pr": 35418,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "e7ac3c12-f3ed-4fea-9ed2-a1f2510f0601"
+  },
+  {
+    "question": "At what point in the extractive QA postprocessing are low-precision start and end logits cast back to full precision?",
+    "answer": "In `DocumentQuestionAnsweringPipeline.postprocess_extractive_qa` (src/transformers/pipelines/document_question_answering.py), immediately inside the loop over `model_outputs`\u2014and before calling `select_starts_ends`\u2014any `start_logits` or `end_logits` in bfloat16/float16 are cast back to full precision via `.float()`.",
+    "facts": [
+      "DocumentQuestionAnsweringPipeline.postprocess_extractive_qa is defined in src/transformers/pipelines/document_question_answering.py.",
+      "DocumentQuestionAnsweringPipeline.postprocess_extractive_qa contains a loop over model_outputs.",
+      "Immediately inside the loop over model_outputs and before calling select_starts_ends, any start_logits in bfloat16 or float16 are cast to full precision via .float().",
+      "Immediately inside the loop over model_outputs and before calling select_starts_ends, any end_logits in bfloat16 or float16 are cast to full precision via .float()."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 2
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 2,
+      "n_context_nodes": 2,
+      "n_files_pr": 2,
+      "pr": 35456,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "f4b26395-7da1-4101-bd5c-9366527024b0"
+  },
+  {
+    "question": "Which class name substring prevents a model from using the default dynamic cache?",
+    "answer": "In GenerationMixin._supports_default_dynamic_cache (src/transformers/generation/utils.py), any model whose class name (lower-cased) contains one of these substrings will skip the default dynamic cache:\n\n\u2022 \u201cjamba\u201d  \n\u2022 \u201czamba\u201d  \n\u2022 \u201cbamba\u201d  \n\u2022 \u201cminimax\u201d  \n\u2022 \u201clfm2\u201d",
+    "facts": [
+      "GenerationMixin._supports_default_dynamic_cache is defined in src/transformers/generation/utils.py.",
+      "Models whose class name lower-cased contains \u201cjamba\u201d skip the default dynamic cache.",
+      "Models whose class name lower-cased contains \u201czamba\u201d skip the default dynamic cache.",
+      "Models whose class name lower-cased contains \u201cbamba\u201d skip the default dynamic cache.",
+      "Models whose class name lower-cased contains \u201cminimax\u201d skip the default dynamic cache.",
+      "Models whose class name lower-cased contains \u201clfm2\u201d skip the default dynamic cache."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 2
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 2,
+      "n_files_pr": 14,
+      "pr": 35831,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "5b496c2f-9bd1-4af1-a0d7-b639b07ae800"
+  },
+  {
+    "question": "What default value is used for the beta attribute if the config does not define it?",
+    "answer": "In ChameleonVQVAEVectorQuantizer.__init__ (src/transformers/models/chameleon/modeling_chameleon.py), `beta` falls back to 0.25 if it\u2019s not defined on the config.",
+    "facts": [
+      "The __init__ method of ChameleonVQVAEVectorQuantizer is defined in src/transformers/models/chameleon/modeling_chameleon.py.",
+      "In the __init__ method of ChameleonVQVAEVectorQuantizer, beta falls back to 0.25 if it is not defined on the config."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "easy",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 21,
+      "pr": 36053,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "709a0ac7-9fdd-45b1-be59-c2d5b68774d6"
+  },
+  {
+    "question": "How does the forward method convert encoder output into the decoder\u2019s initial query embeddings and reference points?",
+    "answer": "In RTDetrModel.forward (src/transformers/models/rt_detr/modeling_rt_detr.py) the encoder\u2019s flattened output is first passed through enc_score_head (and enc_bbox_head+anchors) to get per\u2010query class scores and un\u2010activated box logits. We then:\n\n\u2022 call torch.topk on the max class scores to pick the top num_queries indices  \n\u2022 use those indices to gather \u201cregion features\u201d from the encoded memory (or, if config.learn_initial_query=True, tile a learned weight_embedding) to form the decoder\u2019s initial inputs_embeds (\u201ctarget\u201d)  \n\u2022 similarly gather the corresponding un\u2010activated box logits as reference_points_unact, take sigmoid for normalized boxes, and detach to form init_reference_points  \n\nFinally, we call self.decoder( inputs_embeds=target, reference_points=init_reference_points, \u2026 ) so the decoder starts from those learned query embeddings and reference points.",
+    "facts": [
+      "RTDetrModel.forward is defined in src/transformers/models/rt_detr/modeling_rt_detr.py.",
+      "In RTDetrModel.forward, the encoder\u2019s flattened output is passed through enc_score_head.",
+      "In RTDetrModel.forward, the encoder\u2019s flattened output is passed through enc_bbox_head and anchors.",
+      "enc_score_head and enc_bbox_head with anchors produce per-query class scores and un-activated box logits.",
+      "torch.topk is called on the maximum class scores to pick the top num_queries indices.",
+      "The selected indices are used to gather region features from the encoded memory to form the decoder\u2019s initial inputs_embeds (target).",
+      "If config.learn_initial_query=True, a learned weight_embedding is tiled instead of gathering region features to form the decoder\u2019s initial inputs_embeds.",
+      "The corresponding un-activated box logits are gathered as reference_points_unact.",
+      "reference_points_unact are passed through a sigmoid function to obtain normalized boxes.",
+      "The normalized boxes are detached to form init_reference_points.",
+      "self.decoder is called with inputs_embeds set to target and reference_points set to init_reference_points."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 12
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 12,
+      "n_files_pr": 22,
+      "pr": 36261,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "a8168595-5bd8-4d32-af77-c1312cfb00f2"
+  },
+  {
+    "question": "Which utility does the test use to normalize and compare model outputs to four decimal places before assertion?",
+    "answer": "The test uses the nested_simplify utility (called with decimals=4) to round and normalize the pipeline\u2019s nested output before doing the assertion.",
+    "facts": [
+      "The test uses the nested_simplify utility.",
+      "The nested_simplify utility is called with decimals = 4.",
+      "The nested_simplify utility rounds the pipeline\u2019s nested output.",
+      "The nested_simplify utility normalizes the pipeline\u2019s nested output.",
+      "The test performs its assertion after rounding and normalizing the pipeline\u2019s nested output."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "easy",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 36359,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "f30a2713-0432-4be6-b8ad-a4d37c998692"
+  },
+  {
+    "question": "Which device availability and compute capability conditions must hold for the LLMAWQ backend to be enabled?",
+    "answer": "In AwqConfig.post_init (src/transformers/utils/quantization_config.py), the LLMAWQ backend is gated so that:\n\n\u2022 torch.cuda.is_available() or torch.xpu.is_available() must be true  \n\u2022 If CUDA is used, torch.cuda.get_device_capability()[0] (the major version) must be \u2265 8 (i.e. compute capability \u2265 8.0)",
+    "facts": [
+      "AwqConfig.post_init is defined in src/transformers/utils/quantization_config.py.",
+      "In AwqConfig.post_init, the LLMAWQ backend is gated so that torch.cuda.is_available() or torch.xpu.is_available() must return true.",
+      "If CUDA is used, torch.cuda.get_device_capability()[0] must be greater than or equal to 8.",
+      "torch.cuda.get_device_capability()[0] represents the major version of the CUDA device\u2019s compute capability.",
+      "A major compute capability version of 8 corresponds to compute capability \u2265 8.0."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 3
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": true,
+      "n_context_files": 2,
+      "n_context_nodes": 3,
+      "n_files_pr": 3,
+      "pr": 36656,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "fe1c6a33-4bf6-40bf-b28c-25a095b25f88"
+  },
+  {
+    "question": "Which encoder layer implementations include a dtype-based clamp operation for float16 hidden states?",
+    "answer": "All of the checked encoder layers include the float16-clamp logic in their forward methods:\n\n\u2022 BlenderbotEncoderLayer (src/transformers/models/blenderbot/modeling_blenderbot.py)  \n\u2022 M2M100EncoderLayer (src/transformers/models/m2m_100/modeling_m2m_100.py)  \n\u2022 MBartEncoderLayer (src/transformers/models/mbart/modeling_mbart.py)  \n\u2022 PegasusEncoderLayer (src/transformers/models/pegasus/modeling_pegasus.py)  \n\u2022 Qwen2AudioEncoderLayer (src/transformers/models/qwen2_audio/modeling_qwen2_audio.py)  \n\u2022 Speech2TextEncoderLayer (src/transformers/models/speech_to_text/modeling_speech_to_text.py)  \n\u2022 WhisperEncoderLayer (src/transformers/models/whisper/modeling_whisper.py)",
+    "facts": [
+      "BlenderbotEncoderLayer includes float16-clamp logic in its forward method.",
+      "BlenderbotEncoderLayer is located in src/transformers/models/blenderbot/modeling_blenderbot.py.",
+      "M2M100EncoderLayer includes float16-clamp logic in its forward method.",
+      "M2M100EncoderLayer is located in src/transformers/models/m2m_100/modeling_m2m_100.py.",
+      "MBartEncoderLayer includes float16-clamp logic in its forward method.",
+      "MBartEncoderLayer is located in src/transformers/models/mbart/modeling_mbart.py.",
+      "PegasusEncoderLayer includes float16-clamp logic in its forward method.",
+      "PegasusEncoderLayer is located in src/transformers/models/pegasus/modeling_pegasus.py.",
+      "Qwen2AudioEncoderLayer includes float16-clamp logic in its forward method.",
+      "Qwen2AudioEncoderLayer is located in src/transformers/models/qwen2_audio/modeling_qwen2_audio.py.",
+      "Speech2TextEncoderLayer includes float16-clamp logic in its forward method.",
+      "Speech2TextEncoderLayer is located in src/transformers/models/speech_to_text/modeling_speech_to_text.py.",
+      "WhisperEncoderLayer includes float16-clamp logic in its forward method.",
+      "WhisperEncoderLayer is located in src/transformers/models/whisper/modeling_whisper.py."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 7
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": false,
+      "n_context_files": 7,
+      "n_context_nodes": 7,
+      "n_files_pr": 7,
+      "pr": 36712,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "b4b7773a-f0a4-4b04-8744-4caf770b9857"
+  },
+  {
+    "question": "How does the constructor handle a legacy 'type' field in the rope_scaling configuration?",
+    "answer": "In Qwen2MoeConfig.__init__ (src/transformers/models/qwen2_moe/configuration_qwen2_moe.py), right before calling rope_config_validation, it does:\n\n```\nif self.rope_scaling is not None and \"type\" in self.rope_scaling:\n    # BC: map legacy \u201ctype\u201d \u2192 \u201crope_type\u201d\n    self.rope_scaling[\"rope_type\"] = self.rope_scaling[\"type\"]\n```\n\nso any old `type` field is renamed to the new `rope_type` key for backwards compatibility.",
+    "facts": [
+      "Qwen2MoeConfig.__init__ is defined in src/transformers/models/qwen2_moe/configuration_qwen2_moe.py.",
+      "Right before calling rope_config_validation, the code checks if self.rope_scaling is not None.",
+      "Right before calling rope_config_validation, the code checks if \"type\" is a key in self.rope_scaling.",
+      "The code comment states \u201cmap legacy \u2018type\u2019 \u2192 \u2018rope_type\u2019.\u201d",
+      "The code assigns self.rope_scaling[\"rope_type\"] = self.rope_scaling[\"type\"].",
+      "Any old `type` field is renamed to the new `rope_type` key for backwards compatibility."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 24,
+      "pr": 36878,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "dd4da176-c9cb-4072-afb7-4c88dad4632b"
+  },
+  {
+    "question": "In the feature extractor's constructor, how are the triangularization space and mel scale configured for the mel filter bank?",
+    "answer": "In Phi4MultimodalFeatureExtractor.__init__ (src/transformers/models/phi4_multimodal/feature_extraction_phi4_multimodal.py) the mel filter bank is created with  \n\u2022 triangularize_in_mel_space=True  \n\u2022 mel_scale=\"kaldi\"  \nin the call to mel_filter_bank(...).",
+    "facts": [
+      "The Phi4MultimodalFeatureExtractor.__init__ method is defined in src/transformers/models/phi4_multimodal/feature_extraction_phi4_multimodal.py.",
+      "The mel filter bank is created by calling mel_filter_bank in Phi4MultimodalFeatureExtractor.__init__.",
+      "The mel_filter_bank call in Phi4MultimodalFeatureExtractor.__init__ includes triangularize_in_mel_space=True.",
+      "The mel_filter_bank call in Phi4MultimodalFeatureExtractor.__init__ includes mel_scale=\"kaldi\"."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 36966,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "9086bdc9-90b5-44a0-be72-e187467b5550"
+  },
+  {
+    "question": "Which utility class maps the device and seed combinations to the expected description strings in this integration test?",
+    "answer": "The mapping is done by the `Expectations` utility class (imported in `tests/models/llava/test_modeling_llava.py`), which takes a dict keyed by `(device, seed)` and returns the expected string for each combination.",
+    "facts": [
+      "There is a utility class named `Expectations`.",
+      "The `Expectations` utility class is imported in `tests/models/llava/test_modeling_llava.py`.",
+      "The `Expectations` utility class takes a dict.",
+      "The dict taken by `Expectations` is keyed by `(device, seed)`.",
+      "The `Expectations` utility class returns the expected string for each `(device, seed)` combination."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 37130,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "c8d9e865-eadc-407d-bcdd-3a99ffb53132"
+  },
+  {
+    "question": "Which method in the tester class is responsible for creating test images for PIL, NumPy, and PyTorch inputs?",
+    "answer": "The method is prepare_image_inputs on ChameleonImageProcessingTester (in tests/models/chameleon/test_image_processing_chameleon.py), which generates PIL, NumPy and PyTorch test images.",
+    "facts": [
+      "The method prepare_image_inputs is a member of ChameleonImageProcessingTester.",
+      "ChameleonImageProcessingTester is located in tests/models/chameleon/test_image_processing_chameleon.py.",
+      "The method prepare_image_inputs generates PIL test images.",
+      "The method prepare_image_inputs generates NumPy test images.",
+      "The method prepare_image_inputs generates PyTorch test images."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 9
+      },
+      "includes_code": false,
+      "includes_location_hints": true,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 9,
+      "n_files_pr": 5,
+      "pr": 37140,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "a3ce68e6-c9d9-43b7-9cd3-21e51d832642"
+  },
+  {
+    "question": "In the test comparing fast and slow processors, what absolute and relative tolerances are used when asserting segmentation label equivalence?",
+    "answer": "In MobileViTImageProcessingTest.test_slow_fast_equivalence (tests/models/mobilevit/test_image_processing_mobilevit.py) the call is:\n\n    torch.testing.assert_close(encoding_slow.labels, encoding_fast.labels, atol=1e-1, rtol=1e-3)\n\nso atol=1e-1 and rtol=1e-3.",
+    "facts": [
+      "MobileViTImageProcessingTest.test_slow_fast_equivalence is defined in tests/models/mobilevit/test_image_processing_mobilevit.py.",
+      "MobileViTImageProcessingTest.test_slow_fast_equivalence calls torch.testing.assert_close with encoding_slow.labels and encoding_fast.labels as arguments.",
+      "In the torch.testing.assert_close call, atol is set to 1e-1.",
+      "In the torch.testing.assert_close call, rtol is set to 1e-3."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "hard",
+      "found_stats": {
+        "path": 5
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 5,
+      "n_files_pr": 5,
+      "pr": 37143,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "18c6828a-fdcb-4456-897e-e5a71ea72395"
+  },
+  {
+    "question": "Which TorchDynamo config or environment variable should be enabled to avoid graph breaks from scalar outputs in flash attention utilities?",
+    "answer": "In `src/transformers/modeling_flash_attention_utils.py::_prepare_flash_attention_from_position_ids` you need to enable TorchDynamo\u2019s scalar capture. Either set the env var  \n\u2022 `TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1`  \nor in code before your forward pass do  \n\u2022 `torch._dynamo.config.capture_scalar_outputs = True`",
+    "facts": [
+      "The function `_prepare_flash_attention_from_position_ids` is in the file `src/transformers/modeling_flash_attention_utils.py`.",
+      "TorchDynamo has a feature called scalar capture.",
+      "The function `_prepare_flash_attention_from_position_ids` requires enabling TorchDynamo\u2019s scalar capture.",
+      "Setting the environment variable TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS to 1 enables TorchDynamo\u2019s scalar capture.",
+      "Setting `torch._dynamo.config.capture_scalar_outputs = True` in code before the forward pass enables TorchDynamo\u2019s scalar capture."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 2
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 2,
+      "n_files_pr": 1,
+      "pr": 37206,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "fd98b5c7-83a6-4a12-9bb6-d03c564917bc"
+  },
+  {
+    "question": "How does each of the two convert_old_keys_to_new_keys functions handle a None state_dict_keys input and what do they return?",
+    "answer": "The two implementations behave quite differently on a None input:\n\n1. src/transformers/models/d_fine/convert_d_fine_original_pytorch_checkpoint_to_hf.py::convert_old_keys_to_new_keys  \n   \u2022 No guard for None \u2013 immediately does `state_dict_keys.keys()`.  \n   \u2022 If you pass in None you\u2019ll get an AttributeError; otherwise it renames keys in-place and returns the same dict.\n\n2. src/transformers/models/internvl/convert_internvl_weights_to_hf.py::convert_old_keys_to_new_keys  \n   \u2022 Starts with `output_dict = {}` and only populates it if `state_dict_keys is not None`.  \n   \u2022 If you pass in None it simply skips all renaming logic and returns the empty dict.",
+    "facts": [
+      "The two implementations behave differently on a None input.",
+      "In src/transformers/models/d_fine/convert_d_fine_original_pytorch_checkpoint_to_hf.py, the convert_old_keys_to_new_keys function has no guard for None inputs.",
+      "That function immediately calls state_dict_keys.keys().",
+      "Passing None to that function raises an AttributeError.",
+      "For non-None inputs, that function renames keys in-place.",
+      "For non-None inputs, that function returns the same dict.",
+      "In src/transformers/models/internvl/convert_internvl_weights_to_hf.py, the convert_old_keys_to_new_keys function starts with output_dict = {}.",
+      "That function populates output_dict only if state_dict_keys is not None.",
+      "Passing None to that function returns an empty dict.",
+      "Passing None to that function skips all renaming logic."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 13
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 2,
+      "n_context_nodes": 13,
+      "n_files_pr": 11,
+      "pr": 37266,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "95134d8f-fa3a-4da2-aeac-8fbade17dc7c"
+  },
+  {
+    "question": "What preprocessing steps convert the fetched images and formatted prompts into the device- and dtype-correct tensor inputs for generation?",
+    "answer": "The magic happens in your `processor` call in `processing_aria.py`:\n\n1. You first format your messages with  \n   `processor.apply_chat_template(...)`  \n2. Then you call  \n   `processor(text=prompts, images=images, padding=True, return_tensors=\"pt\")`  \n   \u2013 under the hood this runs the text tokenizer (\u2192 padded `input_ids`, `attention_mask`) and the vision feature-extractor (\u2192 resized & normalized `pixel_values`), all returned as PyTorch tensors.  \n3. Finally you call  \n   `.to(device=model.device, dtype=model.dtype)`  \n   to move & cast every tensor to the model\u2019s device and dtype.",
+    "facts": [
+      "The `processor` call is located in the `processing_aria.py` file.",
+      "Messages are formatted using `processor.apply_chat_template(...)`.",
+      "Calling `processor(text=prompts, images=images, padding=True, return_tensors=\"pt\")` runs the text tokenizer.",
+      "Calling `processor(text=prompts, images=images, padding=True, return_tensors=\"pt\")` runs the vision feature-extractor.",
+      "The text tokenizer produces padded `input_ids` and `attention_mask`.",
+      "The vision feature-extractor produces resized and normalized `pixel_values`.",
+      "All outputs are returned as PyTorch tensors.",
+      "The `.to(device=model.device, dtype=model.dtype)` call moves and casts every tensor to the model\u2019s device and dtype."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "hard",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 37444,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "c174791e-3ab6-4497-b0ec-507b54c609ae"
+  },
+  {
+    "question": "Which function is responsible for producing the expected modeling content for each modular file prior to the diff comparison?",
+    "answer": "The expected modeling content is generated by the convert_modular_file function (called in compare_files in utils/check_modular_conversion.py) prior to running the diff.",
+    "facts": [
+      "The expected modeling content is generated by the convert_modular_file function.",
+      "The convert_modular_file function is called in compare_files in utils/check_modular_conversion.py.",
+      "The expected modeling content is generated prior to running the diff."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "easy",
+      "found_stats": {
+        "path": 6
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 6,
+      "n_files_pr": 5,
+      "pr": 37456,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "09091ab8-7c4b-47ff-b2f6-f7904a2ea6c3"
+  },
+  {
+    "question": "Which config parameter controls the weight applied to the no-object class in Mask2FormerLoss?",
+    "answer": "The no\u2010object class weight is controlled by the `no_object_weight` parameter on the `Mask2FormerConfig` (used as `config.no_object_weight` in `Mask2FormerLoss`).",
+    "facts": [
+      "The no\u2010object class weight is controlled by the no_object_weight parameter on the Mask2FormerConfig.",
+      "The no_object_weight parameter is used as config.no_object_weight in Mask2FormerLoss."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 15,
+      "pr": 37610,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "f572fba1-5663-40c4-aba9-ae2771c57f0a"
+  },
+  {
+    "question": "What does the margin cropper return when the input image has no intensity variation, and which test confirms this for both slow and fast processors?",
+    "answer": "When `crop_margin` sees `max_val == min_val` (i.e. no intensity variation) it simply returns the original image array (or Tensor) unchanged. This behavior is asserted in `tests/models/nougat/test_image_processing_nougat.py::NougatImageProcessingTest.test_crop_margin_all_white` for both the slow (`NougatImageProcessor`) and fast (`NougatImageProcessorFast`) implementations.",
+    "facts": [
+      "crop_margin returns the original image array or Tensor unchanged when max_val == min_val.",
+      "max_val == min_val indicates no intensity variation.",
+      "The test at tests/models/nougat/test_image_processing_nougat.py::NougatImageProcessingTest.test_crop_margin_all_white asserts this behavior.",
+      "The test asserts this behavior for the slow implementation NougatImageProcessor.",
+      "The test asserts this behavior for the fast implementation NougatImageProcessorFast."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 13
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 2,
+      "n_context_nodes": 13,
+      "n_files_pr": 6,
+      "pr": 37661,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "broad",
+      "type": "open_question"
+    },
+    "id": "4d7470a1-7b3e-43b6-a67a-9f092db3e59f"
+  },
+  {
+    "question": "What specific version requirements are enforced before assigning the XPU data layout and what error is raised if they aren\u2019t met?",
+    "answer": "In TorchAoConfig.get_apply_tensor_subclass (src/transformers/utils/quantization_config.py), before it does\n\n    quant_type_kwargs[\"layout\"] = Int4XPULayout()\n\nit checks\n\n\u2013 torchao version \u2265 0.11.0  \n\u2013 torch version > 2.7.9 (i.e. \u2265 2.8.0)\n\nIf either of those isn\u2019t met, it raises:\n\n    ValueError(\"TorchAoConfig requires torchao >= 0.11.0 and torch >= 2.8.0 for XPU support. Please upgrade the version or use run on CPU with the cpu version pytorch.\")",
+    "facts": [
+      "TorchAoConfig.get_apply_tensor_subclass is defined in src/transformers/utils/quantization_config.py.",
+      "TorchAoConfig.get_apply_tensor_subclass checks that the torchao version is \u2265 0.11.0 before assigning quant_type_kwargs[\"layout\"] = Int4XPULayout().",
+      "TorchAoConfig.get_apply_tensor_subclass checks that the torch version is > 2.7.9 (i.e., \u2265 2.8.0) before assigning quant_type_kwargs[\"layout\"] = Int4XPULayout().",
+      "TorchAoConfig.get_apply_tensor_subclass raises a ValueError if the torchao version < 0.11.0 or the torch version \u2264 2.7.9.",
+      "The ValueError message is \"TorchAoConfig requires torchao >= 0.11.0 and torch >= 2.8.0 for XPU support. Please upgrade the version or use run on CPU with the cpu version pytorch.\""
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": true,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 37781,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "bd15b9bf-622c-469c-a111-e5f1bb4592d9"
+  },
+  {
+    "question": "If the text configuration lacks a sliding window setting, what value is assigned to the visualizer's window parameter?",
+    "answer": "In AttentionMaskVisualizer.__init__ (src/transformers/utils/attention_visualizer.py), if your text config has no sliding_window attr, self.sliding_window is set to None.",
+    "facts": [
+      "AttentionMaskVisualizer.__init__ is defined in src/transformers/utils/attention_visualizer.py.",
+      "In AttentionMaskVisualizer.__init__, if the text config has no sliding_window attribute, then self.sliding_window is set to None."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 1,
+      "pr": 37860,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "62072142-b866-4f55-849c-a9648478c6b4"
+  },
+  {
+    "question": "If use_fast is unset, how does the code infer whether to use the fast processor variant?",
+    "answer": "In AutoImageProcessor.from_pretrained (src/transformers/models/auto/image_processing_auto.py), once it has determined `image_processor_type`, it does:\n\n```python\nif use_fast is None:\n    use_fast = image_processor_type.endswith(\"Fast\")\n    # \u2026logs a warning if that yields False\u2026\n```\n\nSo if you don\u2019t pass `use_fast`, it infers it by checking whether the saved `image_processor_type` name ends in \u201cFast\u201d.",
+    "facts": [
+      "AutoImageProcessor.from_pretrained is implemented in src/transformers/models/auto/image_processing_auto.py.",
+      "The method determines a variable named image_processor_type before further processing.",
+      "The code checks if use_fast is None.",
+      "If use_fast is None, the code sets use_fast to the result of image_processor_type.endswith(\"Fast\").",
+      "The code logs a warning if image_processor_type.endswith(\"Fast\") yields False.",
+      "When use_fast is not passed to from_pretrained, it is inferred by checking whether the saved image_processor_type name ends with \u201cFast\u201d."
+    ],
+    "metadata": {
+      "commit": "a1ad9197c5756858e9014a0e01fe5fb1791efdf2",
+      "difficulty": "moderate",
+      "found_stats": {
+        "path": 1
+      },
+      "includes_code": false,
+      "includes_location_hints": false,
+      "is_core_question": false,
+      "n_context_files": 1,
+      "n_context_nodes": 1,
+      "n_files_pr": 19,
+      "pr": 37878,
+      "repo": "https://github.com/huggingface/transformers.git",
+      "scope": "deep",
+      "type": "open_question"
+    },
+    "id": "818aa36b-59dd-4400-875e-d4927069bc1c"
+  }
+]

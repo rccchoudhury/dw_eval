@@ -1,0 +1,18 @@
+{
+  "scraped_at": "2025-11-16T21:19:56.987915",
+  "repositories": {
+    "huggingface/transformers": {
+      "count": 50
+    },
+    "Dao-AILab/flash-attention": {
+      "count": 15
+    },
+    "huggingface/diffusers": {
+      "count": 39
+    },
+    "ffmpeg/ffmpeg": {
+      "count": 0
+    }
+  },
+  "total_prs": 104
+}

@@ -1,0 +1,320 @@
+[
+  {
+    "questions": [
+      {
+        "question": "When the processor encounters video input without an explicitly provided fps parameter, how does it determine what frame rate to use for calculating temporal grids?",
+        "answer": "The processor first attempts to read the fps from video metadata returned by the video_processor. If metadata is available, it extracts the sampled_fps property from each VideoMetadata object. If the metadata cannot provide fps information, the VideoMetadata.sampled_fps property falls back to 24 as the default frame rate, which is then used in the second_per_grid_ts calculation.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/models/qwen2_5_vl/processing_qwen2_5_vl.py",
+          "src/transformers/video_utils.py"
+        ],
+        "facts": [
+          "The processor attempts to read fps from video metadata returned by the video_processor",
+          "If metadata is available, the processor extracts the sampled_fps property from each VideoMetadata object",
+          "If metadata cannot provide fps information, VideoMetadata.sampled_fps falls back to 24 as the default frame rate",
+          "The determined fps value is used in the second_per_grid_ts calculation for temporal grids"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 42009,
+      "title": "fix: improve video processing fps assignment logic",
+      "html_url": "https://github.com/huggingface/transformers/pull/42009",
+      "repo": "huggingface/transformers",
+      "commit_sha": "3c0b2b101ec4bd68bf1c0c3edfd81ccd9a422236",
+      "files": [
+        "src/transformers/models/qwen2_5_vl/modular_qwen2_5_vl.py",
+        "src/transformers/models/qwen2_5_vl/processing_qwen2_5_vl.py",
+        "src/transformers/video_utils.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "How does the leveling system control which attention implementations and compile modes are included in benchmark configurations?",
+        "answer": "In `get_config_by_level` (benchmark_v2/framework/benchmark_config.py), levels 0-2 add specific pre-selected configurations incrementally. For level \u22653, it cross-generates all attention implementations with either no compile or 'default' compile mode. Level \u22654 extends this to include all compile modes from `BenchmarkConfig.all_compiled_modes`.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "benchmark_v2/framework/benchmark_config.py"
+        ],
+        "facts": [
+          "The get_config_by_level function in benchmark_v2/framework/benchmark_config.py controls configuration inclusion based on levels",
+          "Levels 0-2 add specific pre-selected configurations incrementally",
+          "Level \u22653 cross-generates all attention implementations with either no compile or 'default' compile mode",
+          "Level \u22654 extends level 3 to include all compile modes from BenchmarkConfig.all_compiled_modes"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 42008,
+      "title": "Reduce the number of benchmark in the CI",
+      "html_url": "https://github.com/huggingface/transformers/pull/42008",
+      "repo": "huggingface/transformers",
+      "commit_sha": "dd4e048e75d61512a92faba59d7651aad1ce9519",
+      "files": [
+        ".github/workflows/benchmark.yml",
+        "benchmark_v2/framework/benchmark_config.py",
+        "benchmark_v2/run_benchmarks.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "How does the image processor's from_dict method ensure that kwargs passed to from_pretrained are available during initialization rather than being set as attributes afterward?",
+        "answer": "In BaseImageProcessor.from_dict (src/transformers/image_processing_base.py), the method now updates image_processor_dict with kwargs that match valid_kwargs annotations before instantiating the class. It filters kwargs using `image_processor_dict.update({k: v for k, v in kwargs.items() if k in cls.valid_kwargs.__annotations__})`, then passes the updated dict to `cls(**image_processor_dict)`. This allows custom initialization logic (like max_pixels overwriting size['longest_edge']) to execute properly, rather than setting attributes post-instantiation.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/image_processing_base.py"
+        ],
+        "facts": [
+          "BaseImageProcessor.from_dict filters kwargs by checking if they exist in cls.valid_kwargs.__annotations__",
+          "The filtered kwargs are merged into image_processor_dict using image_processor_dict.update() before class instantiation",
+          "The updated image_processor_dict is passed to cls(**image_processor_dict) to instantiate the class",
+          "This approach allows custom initialization logic to execute during __init__ rather than setting attributes post-instantiation",
+          "An example of custom initialization logic is max_pixels overwriting size['longest_edge']"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41997,
+      "title": "Fix issue with from pretrained and kwargs in image processors",
+      "html_url": "https://github.com/huggingface/transformers/pull/41997",
+      "repo": "huggingface/transformers",
+      "commit_sha": "900cf9d33bc091f3e47f8e598cba464f8b93bdd7",
+      "files": [
+        "src/transformers/image_processing_base.py",
+        "src/transformers/image_processing_utils_fast.py",
+        "src/transformers/models/pix2struct/image_processing_pix2struct.py",
+        "src/transformers/processing_utils.py",
+        "tests/models/pix2struct/test_processing_pix2struct.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "How does the proxy function determine whether to call the underlying kernel method or return a no-op decorator?",
+        "answer": "In hub_kernels.py, the use_kernel_forward_from_hub function checks the _kernels_enabled flag. If True, it imports and calls the actual _kernels_use_kernel_forward_from_hub from the kernels library. If False, it logs a warning and returns an identity decorator (lambda cls: cls) that leaves the class unchanged.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/integrations/hub_kernels.py"
+        ],
+        "facts": [
+          "The use_kernel_forward_from_hub function in hub_kernels.py checks the _kernels_enabled flag to determine behavior",
+          "If _kernels_enabled is True, the function imports and calls _kernels_use_kernel_forward_from_hub from the kernels library",
+          "If _kernels_enabled is False, the function logs a warning and returns an identity decorator (lambda cls: cls) that leaves the class unchanged"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41990,
+      "title": "feat(kernels): add opt-out flag to disable kernels hub usage through the lib",
+      "html_url": "https://github.com/huggingface/transformers/pull/41990",
+      "repo": "huggingface/transformers",
+      "commit_sha": "922e85487b496fb22f44b4a0b697f63726306c1d",
+      "files": [
+        "src/transformers/integrations/hub_kernels.py",
+        "tests/integrations/test_hub_kernels.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "How does the convolution module utilize the configuration to control bias behavior across its three convolutional layers?",
+        "answer": "In ParakeetConvolutionModule.__init__ (src/transformers/models/parakeet/modeling_parakeet.py), the module reads config.convolution_bias and passes it as the bias parameter to all three Conv1d layers: pointwise_conv1 (1\u00d71 expansion), depthwise_conv (grouped convolution with kernel_size), and pointwise_conv2 (1\u00d71 projection). This allows centralized control over whether convolutions use bias terms.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/models/parakeet/modeling_parakeet.py",
+          "src/transformers/models/parakeet/configuration_parakeet.py"
+        ],
+        "facts": [
+          "ParakeetConvolutionModule.__init__ reads config.convolution_bias to control bias behavior",
+          "The config.convolution_bias value is passed as the bias parameter to three Conv1d layers: pointwise_conv1, depthwise_conv, and pointwise_conv2",
+          "pointwise_conv1 is a 1\u00d71 expansion convolution, depthwise_conv is a grouped convolution with kernel_size, and pointwise_conv2 is a 1\u00d71 projection convolution",
+          "This configuration-based approach provides centralized control over whether all three convolutional layers use bias terms"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41969,
+      "title": "add support for saving encoder only so any parakeet model can be loaded for inference",
+      "html_url": "https://github.com/huggingface/transformers/pull/41969",
+      "repo": "huggingface/transformers",
+      "commit_sha": "b9f90dc388fd415a2ba2a6a31a372f451d4a4eed",
+      "files": [
+        "src/transformers/models/fastspeech2_conformer/configuration_fastspeech2_conformer.py",
+        "src/transformers/models/fastspeech2_conformer/modeling_fastspeech2_conformer.py",
+        "src/transformers/models/parakeet/configuration_parakeet.py",
+        "src/transformers/models/parakeet/convert_nemo_to_hf.py",
+        "src/transformers/models/parakeet/modeling_parakeet.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "How is the causal masking behavior determined in the attention mechanism when dealing with cross-attention versus self-attention scenarios?",
+        "answer": "In both GPT2Attention and DecisionTransformerGPT2Attention (src/transformers/models/gpt2/modeling_gpt2.py and src/transformers/models/decision_transformer/modeling_decision_transformer.py), the is_causal attribute is set during initialization as `not is_cross_attention`. This means causal masking is enabled (True) for self-attention layers but disabled (False) for cross-attention layers, allowing the attention mechanism to properly handle bidirectional context in cross-attention while maintaining autoregressive behavior in self-attention.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/models/gpt2/modeling_gpt2.py",
+          "src/transformers/models/decision_transformer/modeling_decision_transformer.py"
+        ],
+        "facts": [
+          "In GPT2Attention and DecisionTransformerGPT2Attention, the is_causal attribute is set during initialization as `not is_cross_attention`",
+          "Causal masking is enabled (is_causal=True) for self-attention layers where is_cross_attention=False",
+          "Causal masking is disabled (is_causal=False) for cross-attention layers where is_cross_attention=True",
+          "This configuration allows cross-attention to handle bidirectional context while self-attention maintains autoregressive behavior"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41966,
+      "title": "Fix GPT-2 Flash Attention 2 generation with left-padding",
+      "html_url": "https://github.com/huggingface/transformers/pull/41966",
+      "repo": "huggingface/transformers",
+      "commit_sha": "4dd4a8fafed79e28187ba8f5913b1e0442097ea4",
+      "files": [
+        "src/transformers/models/decision_transformer/modeling_decision_transformer.py",
+        "src/transformers/models/gpt2/modeling_gpt2.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "When both rope_scaling and rope_parameters are provided during initialization, how does the configuration handle merging them for the full_attention case?",
+        "answer": "In Gemma3TextConfig.__init__ (src/transformers/models/gemma3/configuration_gemma3.py), when rope_scaling is present and rope_parameters already exists with a 'full_attention' key, the code calls rope_parameters['full_attention'].update(rope_scaling) to merge the rope_scaling values into the existing full_attention parameters. If rope_parameters exists but lacks a 'full_attention' key, it instead calls rope_parameters.update(rope_scaling) to merge at the top level.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/models/gemma3/configuration_gemma3.py",
+          "src/transformers/models/gemma3/modular_gemma3.py"
+        ],
+        "facts": [
+          "In Gemma3TextConfig.__init__, when rope_scaling is provided and rope_parameters contains a 'full_attention' key, the code calls rope_parameters['full_attention'].update(rope_scaling) to merge rope_scaling into the existing full_attention parameters",
+          "If rope_parameters exists but lacks a 'full_attention' key, the code calls rope_parameters.update(rope_scaling) to merge rope_scaling at the top level",
+          "The merging logic is implemented in src/transformers/models/gemma3/configuration_gemma3.py"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41934,
+      "title": "Fix: Gemma3TextConfig rope scaling assignments",
+      "html_url": "https://github.com/huggingface/transformers/pull/41934",
+      "repo": "huggingface/transformers",
+      "commit_sha": "02c324f43fe0ef5d484e846417e5f3bf4484524c",
+      "files": [
+        "src/transformers/models/gemma3/configuration_gemma3.py",
+        "src/transformers/models/gemma3/modular_gemma3.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "What is the purpose of the _can_record_outputs class attribute added to the vision transformer classes, and which module types are mapped for tracking hidden states versus attentions?",
+        "answer": "The _can_record_outputs dictionary maps output types to the specific layer classes where those outputs should be captured. In both SiglipVisionTransformer and Siglip2VisionTransformer (src/transformers/models/siglip/modeling_siglip.py and src/transformers/models/siglip2/modeling_siglip2.py), it maps \"hidden_states\" to the respective EncoderLayer class (SiglipEncoderLayer or Siglip2EncoderLayer) and \"attentions\" to the respective Attention class (SiglipAttention or Siglip2Attention). This enables the model to track and return intermediate outputs from the correct layer types when output_hidden_states or output_attentions is requested.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/models/siglip/modeling_siglip.py",
+          "src/transformers/models/siglip2/modeling_siglip2.py"
+        ],
+        "facts": [
+          "The _can_record_outputs dictionary maps output types to specific layer classes where those outputs should be captured",
+          "In SiglipVisionTransformer, _can_record_outputs maps 'hidden_states' to SiglipEncoderLayer and 'attentions' to SiglipAttention",
+          "In Siglip2VisionTransformer, _can_record_outputs maps 'hidden_states' to Siglip2EncoderLayer and 'attentions' to Siglip2Attention",
+          "This mapping enables the model to track and return intermediate outputs from correct layer types when output_hidden_states or output_attentions is requested"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41930,
+      "title": "handle inputs from Siglip/Siglip2 non-automapped encoder layers",
+      "html_url": "https://github.com/huggingface/transformers/pull/41930",
+      "repo": "huggingface/transformers",
+      "commit_sha": "fd36275be2f3e56bc20da01f1f320b623b413957",
+      "files": [
+        "src/transformers/models/siglip/modeling_siglip.py",
+        "src/transformers/models/siglip2/modeling_siglip2.py",
+        "src/transformers/models/siglip2/modular_siglip2.py",
+        "utils/check_repo.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "Which additional backward data types are now supported alongside the existing bf16 option, and what additional validation constraint must be satisfied when using them?",
+        "answer": "In FPQuantConfig.post_init (src/transformers/utils/quantization_config.py), the supported backward_dtype values are now 'bf16', 'mxfp8', and 'mxfp4'. When using 'mxfp8' or 'mxfp4' for backward_dtype, forward_dtype must be set to 'mxfp4' - other forward dtype combinations with non-bf16 backwards are rejected with a ValueError.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/utils/quantization_config.py",
+          "src/transformers/integrations/fp_quant.py"
+        ],
+        "facts": [
+          "FPQuantConfig.post_init in src/transformers/utils/quantization_config.py now supports backward_dtype values of 'bf16', 'mxfp8', and 'mxfp4'",
+          "When backward_dtype is set to 'mxfp8' or 'mxfp4', forward_dtype must be set to 'mxfp4'",
+          "Combinations with non-bf16 backward_dtype and forward_dtype other than 'mxfp4' are rejected with a ValueError"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41897,
+      "title": "[FPQuant] MXFP8 and MXFP4 backwards support",
+      "html_url": "https://github.com/huggingface/transformers/pull/41897",
+      "repo": "huggingface/transformers",
+      "commit_sha": "020e713ac8e70bd2e72bcd12dc6bd1ada6162562",
+      "files": [
+        "docker/transformers-quantization-latest-gpu/Dockerfile",
+        "src/transformers/integrations/fp_quant.py",
+        "src/transformers/utils/import_utils.py",
+        "src/transformers/utils/quantization_config.py",
+        "tests/quantization/fp_quant_integration/test_fp_quant.py"
+      ]
+    }
+  },
+  {
+    "questions": [
+      {
+        "question": "How does the quantizer determine whether to apply configuration directly to a module's weight parameter versus applying it to a custom parameter name when using FqnToConfig?",
+        "answer": "In TorchAoQuantizer.create_quantized_param (src/transformers/quantizers/quantizer_torchao.py), after matching the FQN to a config, it checks if `top_level_param_name == \"weight\"`. If true, it applies the config directly using `quantize_(module, c, (lambda x, fqn: True))`. For custom parameter names (like gate_up_proj), it wraps the config in a new FqnToConfig mapping the parameter name to the config, then calls `quantize_(module, custom_param_fqn_config, filter_fn=None)`.",
+        "scope": "deep",
+        "is_core_question": true,
+        "key_files": [
+          "src/transformers/quantizers/quantizer_torchao.py"
+        ],
+        "facts": [
+          "In TorchAoQuantizer.create_quantized_param, after matching FQN to a config, it checks if top_level_param_name equals 'weight'",
+          "When top_level_param_name is 'weight', the config is applied directly using quantize_(module, c, (lambda x, fqn: True))",
+          "For custom parameter names like gate_up_proj, the config is wrapped in a new FqnToConfig mapping the parameter name to the config",
+          "For custom parameters, quantize_(module, custom_param_fqn_config, filter_fn=None) is called with the wrapped config"
+        ]
+      }
+    ],
+    "pr_data": {
+      "pr_number": 41894,
+      "title": "Update transformers to support `FqnToConfig`",
+      "html_url": "https://github.com/huggingface/transformers/pull/41894",
+      "repo": "huggingface/transformers",
+      "commit_sha": "80134e6e663db962c30d0e45c54265b3141bc7c7",
+      "files": [
+        "docs/source/en/quantization/torchao.md",
+        "src/transformers/quantizers/quantizer_torchao.py",
+        "tests/quantization/torchao_integration/test_torchao.py"
+      ]
+    }
+  }
+]

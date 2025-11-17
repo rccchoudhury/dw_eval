@@ -1,0 +1,50 @@
+# Configuration for dataset generation
+
+# GitHub API token (set via environment variable GITHUB_TOKEN)
+github:
+  token_env: "GITHUB_TOKEN"
+  rate_limit_buffer: 100  # Stop when this many requests remain
+
+# Target repositories
+repositories:
+  - owner: "huggingface"
+    name: "transformers"
+    enabled: true
+  - owner: "Dao-AILab"
+    name: "flash-attention"
+    enabled: true
+  - owner: "huggingface"
+    name: "diffusers"
+    enabled: true
+  - owner: "ggml-org"
+    name: "llama.cpp"
+    enabled: true
+
+# PR filtering criteria
+pr_filters:
+  min_files_changed: 4
+  max_files_changed: 20
+  require_description: true
+  min_description_length: 50
+  state: "closed"  # Only fetch closed/merged PRs
+  merged_only: true
+  max_age_months: 3  # Only include PRs merged in last N months (null = no limit)
+  created_before: "2025-11-06"  # Only PRs created before this date (DeepWiki index cutoff)
+  
+  # Skip PRs that only touch these file patterns
+  exclude_patterns:
+    - "*.md"
+    - "*.txt"
+    - "*.rst"
+    - "docs/*"
+    - "*.yml"
+    - "*.yaml"
+    - "LICENSE"
+    - ".gitignore"
+
+# Scraping settings
+scraping:
+  max_prs_per_repo: 50  # How many PRs to fetch per repository
+  checkpoint_interval: 5  # Save progress every N PRs
+  output_dir: "data/prs_raw"
+  per_page: 100  # GitHub API pagination

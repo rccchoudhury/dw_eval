@@ -1,0 +1,33 @@
+# PR Information
+
+**Title**: {title}
+**PR Number**: {pr_number}
+**Description**: {body}
+
+# Code Context
+
+The code below shows the actual implementation. If shown in diff format, lines with '+' are additions, 
+lines with '-' are removals, and unmarked lines provide surrounding context.
+
+{files_content}
+
+---
+
+# Task
+
+Based on the PR information and code above, generate 1 question that tests understanding of this codebase area. The question should reflect some component of the codebase that is encapsulated within the PR.
+
+Return your response as JSON:
+```json
+{{
+  "questions": [
+    {{
+      "question": "...",
+      "answer": "...",
+      "scope": "broad|deep",
+      "is_core_question": true|false,
+      "key_files": ["file1.py", "file2.py"]
+    }}
+  ]
+}}
+```

@@ -1,0 +1,286 @@
+[
+  {
+    "index": 0,
+    "id": "c3cbde3a-c466-4b4b-aaac-a7d84516fb92",
+    "repo": "huggingface/transformers",
+    "commit": "3c0b2b101ec4bd68bf1c0c3edfd81ccd9a422236",
+    "pr": 42009,
+    "question": "When the processor encounters video input without an explicitly provided fps parameter, how does it determine what frame rate to use for calculating temporal grids?",
+    "ground_truth_answer": "The processor first attempts to read the fps from video metadata returned by the video_processor. If metadata is available, it extracts the sampled_fps property from each VideoMetadata object. If the metadata cannot provide fps information, the VideoMetadata.sampled_fps property falls back to 24 as the default frame rate, which is then used in the second_per_grid_ts calculation.",
+    "facts": [
+      "The processor attempts to read fps from video metadata returned by the video_processor",
+      "If metadata is available, the processor extracts the sampled_fps property from each VideoMetadata object",
+      "If metadata cannot provide fps information, VideoMetadata.sampled_fps falls back to 24 as the default frame rate",
+      "The determined fps value is used in the second_per_grid_ts calculation for temporal grids"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/qwen2_5_vl/processing_qwen2_5_vl.py",
+        "src/transformers/video_utils.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "When the processor encounters video input without an explicitly provided `fps` parameter, it defaults to a predefined frame rate for calculating temporal grids. The specific default `fps` value and the exact mechanism for handling missing `fps` can vary slightly depending on the video processor being used.\n\nFor `Glm4vProcessor` and `Qwen3VLProcessor`, if `metadata.fps` is `None`, the system defaults to `24` frames per second (fps). A warning is logged to indicate that the `fps` could not be inferred and a default is being used.     This default `fps` is then used to calculate timestamps for the video frames.    \n\nIn the case of `VideoLlama3Processor`, if `metadata.fps` is `None`, it defaults to `1` fps.  This default `fps` is then used to determine the timestamps for the video frames. \n\nFor `SmolVLMProcessor`, if `metadata.fps` is `None`, it defaults to `24` fps.  This default is explicitly set for backward compatibility, ensuring timestamps can still be inferred. \n\nThe `Qwen2VLVideoProcessor` and `VideoLlama3VideoProcessor` also have a default `fps` value, which is `2` fps for `Qwen2VLVideoProcessor`  and `1` fps for `VideoLlama3VideoProcessor`.  If `fps` is not provided and `num_frames` is also not provided, these processors will use their default `fps` to calculate the number of frames to sample.  \n\nThe `default_sample_indices_fn` in `src/transformers/video_utils.py` also handles cases where `num_frames` is not provided but `fps` is. In such scenarios, it calculates `num_frames` based on the video's total frames and its `video_fps`. \n\nNotes:\nThe `Multimodal and Vision-Language Models` wiki page provides a high-level overview of how vision and language models are structured and process information, including video.  It mentions \"3D Temporal Patch Embedding\" for video processing in `Qwen2-VL` , which is relevant to the concept of temporal grids. The `docs/source/en/chat_templating_multimodal.md` and `docs/source/en/main_classes/video_processor.md` files also discuss the `fps` parameter in the context of video processing and frame sampling.  \n\nWiki pages you might want to explore:\n- [Multimodal and Vision-Language Models (huggingface/transformers)](/wiki/huggingface/transformers#5.3)\n\nView this search on DeepWiki: https://deepwiki.com/search/when-the-processor-encounters_20f8e08e-0115-4336-9d5a-18f7111ebb02"
+  },
+  {
+    "index": 1,
+    "id": "2619c55d-8a20-4964-91b1-290d807cb716",
+    "repo": "huggingface/transformers",
+    "commit": "dd4e048e75d61512a92faba59d7651aad1ce9519",
+    "pr": 42008,
+    "question": "How does the leveling system control which attention implementations and compile modes are included in benchmark configurations?",
+    "ground_truth_answer": "In `get_config_by_level` (benchmark_v2/framework/benchmark_config.py), levels 0-2 add specific pre-selected configurations incrementally. For level \u22653, it cross-generates all attention implementations with either no compile or 'default' compile mode. Level \u22654 extends this to include all compile modes from `BenchmarkConfig.all_compiled_modes`.",
+    "facts": [
+      "The get_config_by_level function in benchmark_v2/framework/benchmark_config.py controls configuration inclusion based on levels",
+      "Levels 0-2 add specific pre-selected configurations incrementally",
+      "Level \u22653 cross-generates all attention implementations with either no compile or 'default' compile mode",
+      "Level \u22654 extends level 3 to include all compile modes from BenchmarkConfig.all_compiled_modes"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "benchmark_v2/framework/benchmark_config.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The leveling system, specifically within the `benchmark_v2` framework, controls which attention implementations and compile modes are included in benchmark configurations through the `BenchmarkConfig` class and its associated generation functions .\n\n## Benchmark Configuration Generation\n\nThe `benchmark_v2` framework defines benchmark scenarios using the `BenchmarkConfig` class . This class allows for specifying various parameters, including `attn_implementation` and `compile_mode` .\n\n### `generate_all_configs`\n\nThe `generate_all_configs` function is responsible for creating a comprehensive set of `BenchmarkConfig` objects by cross-generating all combinations of attention implementations, compile modes, and kernelization settings .\n\n*   **Attention Implementations**: It includes \"flash_attention_2\", \"eager\", \"sdpa\" with \"math\" and \"flash_attention\" backends, and \"flex_attention\" .\n*   **Compile Modes**: It considers `None`, \"default\", \"reduce-overhead\", \"max-autotune\", and \"max-autotune-no-cudagraphs\" . These modes correspond to different optimization strategies for `torch.compile` .\n*   **Kernelization**: It includes both `True` and `False` for kernelization, depending on `KERNELIZATION_AVAILABLE` .\n\nThe `cross_generate_configs` function is used internally to produce these combinations .\n\n### `generate_main_configs`\n\nThe `generate_main_configs` function provides a smaller, curated set of benchmark configurations, focusing on specific combinations of attention implementations and compile modes . For example, it includes configurations for \"flex_attention\" with \"default\" compile mode and \"eager\" with \"default\" compile mode, as well as \"flash_attention_2\" without a specified compile mode .\n\n## Dynamic Adjustment of Attention Implementation\n\nThe `PreTrainedModel` class, a core component of the `transformers` library, includes methods to check and adjust the attention implementation . The `get_correct_attn_implementation` method validates the requested attention implementation and falls back to \"eager\" if \"sdpa\" is not possible . The `set_attn_implementation` method allows dynamically changing the attention implementation for a model and its submodules .\n\n## Compile Mode Handling\n\nWithin the `BenchmarkConfig` class, if `attn_implementation` is \"flash_attention_2\" or \"sdpa\" with a \"flash_attention\" backend, the `compile_mode` is explicitly set to `None` because Flash Attention does not support compile mode . This ensures that incompatible configurations are avoided during benchmarking.\n\nThe `BenchmarkRunner` class, which orchestrates benchmark execution, uses the `compile_mode` from the `BenchmarkConfig` to set the `CompileConfig` for model generation .\n\n## Notes\n\nThe term \"leveling system\" is not explicitly defined in the provided codebase. However, based on the context, it refers to the mechanism within the `benchmark_v2` framework that generates and manages different benchmark configurations, particularly concerning attention implementations and compile modes. The `BenchmarkConfig` class and its associated generation functions (`generate_all_configs`, `generate_main_configs`) are central to this process.   \n\nWiki pages you might want to explore:\n- [Core Architecture (huggingface/transformers)](/wiki/huggingface/transformers#2)\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-leveling-system-c_1c0b502f-ebb5-4f05-9b43-c4fb0e9e1af9"
+  },
+  {
+    "index": 2,
+    "id": "c6b0cca2-037a-41d8-831d-efd74c68bb3f",
+    "repo": "huggingface/transformers",
+    "commit": "900cf9d33bc091f3e47f8e598cba464f8b93bdd7",
+    "pr": 41997,
+    "question": "How does the image processor's from_dict method ensure that kwargs passed to from_pretrained are available during initialization rather than being set as attributes afterward?",
+    "ground_truth_answer": "In BaseImageProcessor.from_dict (src/transformers/image_processing_base.py), the method now updates image_processor_dict with kwargs that match valid_kwargs annotations before instantiating the class. It filters kwargs using `image_processor_dict.update({k: v for k, v in kwargs.items() if k in cls.valid_kwargs.__annotations__})`, then passes the updated dict to `cls(**image_processor_dict)`. This allows custom initialization logic (like max_pixels overwriting size['longest_edge']) to execute properly, rather than setting attributes post-instantiation.",
+    "facts": [
+      "BaseImageProcessor.from_dict filters kwargs by checking if they exist in cls.valid_kwargs.__annotations__",
+      "The filtered kwargs are merged into image_processor_dict using image_processor_dict.update() before class instantiation",
+      "The updated image_processor_dict is passed to cls(**image_processor_dict) to instantiate the class",
+      "This approach allows custom initialization logic to execute during __init__ rather than setting attributes post-instantiation",
+      "An example of custom initialization logic is max_pixels overwriting size['longest_edge']"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/image_processing_base.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The `from_dict` method in image processors ensures that `kwargs` passed to `from_pretrained` are available during initialization by first updating the `image_processor_dict` with specific `kwargs` before calling the class constructor, and then updating any remaining attributes on the instantiated object.  \n\n### `from_pretrained` to `from_dict` Flow\nWhen you call `ImageProcessingMixin.from_pretrained`, it first retrieves the image processor configuration as a dictionary.  This is done by calling `cls.get_image_processor_dict`, which handles loading the configuration from a file or the Hugging Face Hub.  Any additional `kwargs` provided to `from_pretrained` are also passed along to `get_image_processor_dict`. \n\nAfter obtaining the `image_processor_dict` and potentially modified `kwargs`, `from_pretrained` then calls `cls.from_dict` with these two arguments. \n\n### `from_dict` Initialization Process\nThe `from_dict` method in `ImageProcessingMixin` (and its subclasses) follows these steps:\n1.  **Copy and Pop `return_unused_kwargs`**: It creates a copy of the `image_processor_dict` and pops the `return_unused_kwargs` flag. \n2.  **Pre-update specific `kwargs`**: For certain parameters like `\"size\"` and `\"crop_size\"`, if they are present in both `kwargs` and `image_processor_dict`, the values from `kwargs` are used to update the `image_processor_dict` directly.  This ensures these specific parameters are part of the dictionary used for initial object creation. Subclasses like `DeformableDetrImageProcessor` , `FlavaImageProcessor` , and `GroundingDinoImageProcessor`  override this behavior to handle their specific parameters like `\"max_size\"` or `\"codebook_size\"`.\n3.  **Instantiate the class**: The image processor object is then instantiated using the (potentially updated) `image_processor_dict` by calling `cls(**image_processor_dict)`.  This means that any parameters present in `image_processor_dict` are passed directly to the `__init__` method of the class.\n4.  **Post-update remaining `kwargs`**: After instantiation, the method iterates through any remaining `kwargs`.  If a `kwarg` key matches an existing attribute of the newly created `image_processor` object, that attribute is updated with the `kwarg`'s value using `setattr`.  These `kwargs` are then removed from the `kwargs` dictionary. \n\nThis two-stage process (pre-updating the dictionary and then post-updating attributes) ensures that `kwargs` can influence both the initial construction of the object and override default values set during initialization. \n\nFor example, in `FlavaImageProcessor`, the `from_dict` method explicitly checks for `\"codebook_size\"` and `\"codebook_crop_size\"` in `kwargs` and uses them to update `image_processor_dict` before the `super().from_dict` call, which then instantiates the object.  This ensures these values are available during the `__init__` method's execution.\n\n### Example\nConsider the `test_image_processor_from_dict_with_kwargs` in `FlavaImageProcessingTest`.  It demonstrates how `from_dict` is called with `kwargs` like `size=42` and `codebook_size=33`.  The assertions confirm that these `kwargs` successfully override the default values during the image processor's initialization. \n\nNotes:\nThe `ProcessorMixin.from_args_and_dict` method in `src/transformers/processing_utils.py`  implements a similar logic for general processors, where `kwargs` are used to update the `processor_dict` before instantiation and then passed to the constructor.   This indicates a common pattern across different processing utilities in the library. \n\n\nWiki pages you might want to explore:\n- [Tokenization and Processing System (huggingface/transformers)](/wiki/huggingface/transformers#2.3)\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-image-processors_cbf4477b-5829-44d3-a1ec-fa84013ee96c"
+  },
+  {
+    "index": 3,
+    "id": "36ebc220-f7d0-4c5f-9640-8f02d6083118",
+    "repo": "huggingface/transformers",
+    "commit": "922e85487b496fb22f44b4a0b697f63726306c1d",
+    "pr": 41990,
+    "question": "How does the proxy function determine whether to call the underlying kernel method or return a no-op decorator?",
+    "ground_truth_answer": "In hub_kernels.py, the use_kernel_forward_from_hub function checks the _kernels_enabled flag. If True, it imports and calls the actual _kernels_use_kernel_forward_from_hub from the kernels library. If False, it logs a warning and returns an identity decorator (lambda cls: cls) that leaves the class unchanged.",
+    "facts": [
+      "The use_kernel_forward_from_hub function in hub_kernels.py checks the _kernels_enabled flag to determine behavior",
+      "If _kernels_enabled is True, the function imports and calls _kernels_use_kernel_forward_from_hub from the kernels library",
+      "If _kernels_enabled is False, the function logs a warning and returns an identity decorator (lambda cls: cls) that leaves the class unchanged"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/integrations/hub_kernels.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The proxy function determines whether to call an underlying kernel method or return a no-op decorator primarily by checking the availability of the `kernels` library and specific kernel functions, and the device type.  \n\n### Kernel Availability Check\n\nThe system first checks if the `kernels` library is installed and available.  If `kernels` is not available, a no-op decorator is returned for functions like `use_kernel_forward_from_hub`.  This decorator simply returns the class unchanged, effectively disabling kernel-specific optimizations. \n\nFor other kernel-related functions like `LayerRepository`, `replace_kernel_forward_from_hub`, and `register_kernel_mapping`, if the `kernels` library is not installed, a `RuntimeError` is raised, indicating that `kernels` is required. \n\n### Fast Path Determination\n\nIn models like Mamba and FalconMamba, the `forward` method of the `MambaMixer` (or `FalconMambaMixer`) class determines whether to use a fast path (CUDA kernels) or a slow path (sequential implementation).  \n\nThis decision is based on several conditions:\n1.  **Availability of specific kernel functions**: The `is_fast_path_available` boolean checks if `selective_state_update`, `selective_scan_fn`, `causal_conv1d_fn`, `causal_conv1d_update`, and `mamba_inner_fn` are all available.  These functions are loaded using `lazy_load_kernel(\"causal-conv1d\")`. \n2.  **Device type**: It checks if the device type of `self.x_proj.weight` is \"cuda\". \n3.  **Torch Dynamo compilation status**: It ensures that `torch._dynamo.is_compiling()` is `False`. \n\nIf all these conditions are met, the `cuda_kernels_forward` method is called.  Otherwise, the `slow_forward` method is used. \n\nThe `lazy_load_kernel` function itself attempts to load a kernel module from the hub if `_kernels_available` is true.  If `_kernels_available` is false, it tries to import the module directly if a corresponding `is_{kernel_name}_available` utility function returns true. \n\n### Example in `MambaMixer`\n\nIn the `MambaMixer` class, the `forward` method explicitly checks for the availability of fast path kernels. \n\n```python\n        if is_fast_path_available and \"cuda\" in self.x_proj.weight.device.type and not torch._dynamo.is_compiling():\n            return self.cuda_kernels_forward(hidden_states, cache_params, cache_position, attention_mask)\n        return self.slow_forward(hidden_states, cache_params, cache_position, attention_mask)\n```\n\n\nThis snippet demonstrates the conditional logic: if the fast path is available, the device is CUDA, and `torch.dynamo` is not compiling, then the `cuda_kernels_forward` is invoked.  Otherwise, it falls back to `slow_forward`. \n\n### `set_use_kernels` method\n\nThe `PreTrainedModel` class also has a `set_use_kernels` method that explicitly enables or disables the use of kernels.  If `use_kernels` is set to `True`, it checks if `kernels` is available and then calls `kernelize()`.   If `kernels` is not available, it raises a `ValueError`. \n\nNotes:\nThe `_device_agnostic_dispatch` function  and `torch_only_method` decorator  also demonstrate conditional execution based on device or library availability, but they are used in testing utilities or for general PyTorch availability checks, not directly for switching between kernel methods and no-op decorators in the same way as the Mamba models.  \n\nWiki pages you might want to explore:\n- [Core Architecture (huggingface/transformers)](/wiki/huggingface/transformers#2)\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-proxy-function-de_97397ba4-4c3c-4f0d-9535-84899a98fcc4"
+  },
+  {
+    "index": 4,
+    "id": "272a71c6-cbb6-44be-998d-3e98fb71a922",
+    "repo": "huggingface/transformers",
+    "commit": "b9f90dc388fd415a2ba2a6a31a372f451d4a4eed",
+    "pr": 41969,
+    "question": "How does the convolution module utilize the configuration to control bias behavior across its three convolutional layers?",
+    "ground_truth_answer": "In ParakeetConvolutionModule.__init__ (src/transformers/models/parakeet/modeling_parakeet.py), the module reads config.convolution_bias and passes it as the bias parameter to all three Conv1d layers: pointwise_conv1 (1\u00d71 expansion), depthwise_conv (grouped convolution with kernel_size), and pointwise_conv2 (1\u00d71 projection). This allows centralized control over whether convolutions use bias terms.",
+    "facts": [
+      "ParakeetConvolutionModule.__init__ reads config.convolution_bias to control bias behavior",
+      "The config.convolution_bias value is passed as the bias parameter to three Conv1d layers: pointwise_conv1, depthwise_conv, and pointwise_conv2",
+      "pointwise_conv1 is a 1\u00d71 expansion convolution, depthwise_conv is a grouped convolution with kernel_size, and pointwise_conv2 is a 1\u00d71 projection convolution",
+      "This configuration-based approach provides centralized control over whether all three convolutional layers use bias terms"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/parakeet/modeling_parakeet.py",
+        "src/transformers/models/parakeet/configuration_parakeet.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The convolution module's bias behavior across its three convolutional layers is controlled by the `conv_bias` attribute within the configuration. This attribute is a boolean that determines whether the 1D convolutional layers will include a bias term. \n\nSpecifically, in the `HubertNoLayerNormConvLayer` , `HubertLayerNormConvLayer` , and `HubertGroupNormConvLayer`  classes, the `bias` parameter of the `nn.Conv1d` layer is directly set to the value of `config.conv_bias`.   \n\nFor example, in `HubertNoLayerNormConvLayer`, the convolutional layer is initialized as:\n`self.conv = nn.Conv1d(..., bias=config.conv_bias,)` \nThis pattern is consistent across all three `Hubert` convolutional layer implementations.  \n\nThe `HubertFeatureEncoder` class then instantiates these convolutional layers based on the `feat_extract_norm` configuration.  Regardless of whether group normalization or layer normalization is used, the individual convolutional layers will respect the `config.conv_bias` setting. \n\nNotes:\nOther convolution modules, such as `Wav2Vec2BertConvolutionModule` , `SeamlessM4TConformerConvolutionModule` , `Wav2Vec2ConformerConvolutionModule` , and `SeamlessM4Tv2ConformerConvolutionModule` , explicitly set `bias=False` for their convolutional layers, indicating a different bias control mechanism or a fixed design choice for those specific modules.    The question specifically refers to \"its three convolutional layers\", which aligns with the `Hubert` model's feature encoder structure. \n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-convolution-modul_8196e2d5-eaff-46a1-b279-993a3148937c"
+  },
+  {
+    "index": 5,
+    "id": "bcdbb502-73f9-4c91-8d3f-f55e185bc95b",
+    "repo": "huggingface/transformers",
+    "commit": "4dd4a8fafed79e28187ba8f5913b1e0442097ea4",
+    "pr": 41966,
+    "question": "How is the causal masking behavior determined in the attention mechanism when dealing with cross-attention versus self-attention scenarios?",
+    "ground_truth_answer": "In both GPT2Attention and DecisionTransformerGPT2Attention (src/transformers/models/gpt2/modeling_gpt2.py and src/transformers/models/decision_transformer/modeling_decision_transformer.py), the is_causal attribute is set during initialization as `not is_cross_attention`. This means causal masking is enabled (True) for self-attention layers but disabled (False) for cross-attention layers, allowing the attention mechanism to properly handle bidirectional context in cross-attention while maintaining autoregressive behavior in self-attention.",
+    "facts": [
+      "In GPT2Attention and DecisionTransformerGPT2Attention, the is_causal attribute is set during initialization as `not is_cross_attention`",
+      "Causal masking is enabled (is_causal=True) for self-attention layers where is_cross_attention=False",
+      "Causal masking is disabled (is_causal=False) for cross-attention layers where is_cross_attention=True",
+      "This configuration allows cross-attention to handle bidirectional context while self-attention maintains autoregressive behavior"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/gpt2/modeling_gpt2.py",
+        "src/transformers/models/decision_transformer/modeling_decision_transformer.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The causal masking behavior in attention mechanisms is determined by whether the model is configured as a decoder (causal) or an encoder (bidirectional), and it differs significantly between self-attention and cross-attention scenarios. For self-attention in decoder models, a causal mask is applied to prevent tokens from attending to future tokens, while encoder models use a bidirectional mask allowing full attention. In cross-attention, the masking behavior is generally bidirectional, but can be further refined by additional masks, such as those used for multimodal inputs.\n\n## Causal Masking in Self-Attention\n\nIn self-attention, the masking strategy depends on whether the model is an encoder or a decoder .\n\n### Decoder Models (Causal Self-Attention)\nFor decoder models, a causal mask is applied to ensure that each token can only attend to previous tokens in the sequence . This is crucial for tasks like language generation, where the model predicts the next token based on the preceding context . The `create_causal_mask` function is responsible for generating this mask . This function takes into account parameters like `past_key_values` for caching and `cache_position` to correctly handle the sequence length during generation . The mask is typically a 4D tensor where future positions are filled with a large negative bias to effectively mask them out during the softmax operation in attention .\n\nThe `_update_causal_mask` method, seen in models like `OPTDecoder` , `LongT5Stack` , and `MllamaPreTrainedModel` , prepares this causal mask. It handles different attention implementations (e.g., \"flash_attention_2\", \"flex_attention\", \"sdpa\")  and ensures compatibility with caching mechanisms . For instance, with \"sdpa\", it might rely on the `is_causal` argument directly if possible .\n\n### Encoder Models (Bidirectional Self-Attention)\nFor encoder models, a bidirectional mask is used, allowing each token to attend to all other tokens in the sequence (both past and future) . The `create_bidirectional_mask` function is used for this purpose . This mask typically does not restrict attention based on position, allowing for a full contextual understanding of the input .\n\n## Masking in Cross-Attention\n\nCross-attention mechanisms, typically found in decoder layers of encoder-decoder architectures, involve queries from the decoder attending to keys and values from the encoder .\n\nThe `_update_cross_attn_mask` method, as seen in `MusicgenDecoder` , is responsible for preparing the attention mask for cross-attention. This mask is generally bidirectional, meaning the decoder tokens can attend to all encoder tokens . The mask is expanded to a 4D tensor to be broadcastable across attention heads .\n\nIn some multimodal models like `MllamaTextModel`, additional `cross_attention_mask` and `full_text_row_masked_out_mask` parameters are used to control which image tiles each text token should attend to . This allows for fine-grained control over the cross-attention behavior, enabling scenarios where certain text tokens might not attend to any image tokens .\n\n## Mask Creation Utility Functions\n\nThe `src/transformers/masking_utils.py` file contains core utility functions for creating these masks .\nThe `_preprocess_mask_arguments` function handles initial processing of mask arguments, determining key-value lengths and offsets, and checking for early exit conditions .\nThe `create_causal_mask` function generates a standard causal mask , while `create_bidirectional_mask` creates a bidirectional mask . These functions can also incorporate additional mask functions (e.g., `or_mask_function`, `and_mask_function`) for more complex masking scenarios, such as handling image tokens .\n\nThe `AttentionMaskConverter` class in `src/transformers/modeling_attn_mask_utils.py` provides methods like `to_4d` and `_make_causal_mask` to convert 2D attention masks to 4D and to create causal masks, respectively  . It also supports sliding window attention by modifying the causal mask .\n\n## Example of Mask Application\n\nIn models like `IdeficsModel`, the `causal_mask` is first created using `create_causal_mask` . This `causal_mask` is then passed to both the self-attention layers (`decoder_layer`)  and, if present, the cross-attention layers (`cross_attn_block`) . This demonstrates how a base causal mask can be applied across different attention types within a single model.\n\nNotes:\nThe provided context primarily focuses on the implementation of causal masking within the `huggingface/transformers` library. The distinction between self-attention and cross-attention masking is handled by different utility functions (`create_causal_mask` for self-attention in decoders and `create_bidirectional_mask` for encoders and cross-attention) and conditional logic based on the model's configuration (`self.config.is_decoder`) . The `_update_causal_mask` and `_update_cross_attn_mask` methods further refine this behavior based on the specific attention implementation and caching strategies  .\n\nWiki pages you might want to explore:\n- [Causal Language Model Architectures (huggingface/transformers)](/wiki/huggingface/transformers#5.1)\n\nView this search on DeepWiki: https://deepwiki.com/search/how-is-the-causal-masking-beha_3ca34ca9-b03e-4828-b74d-18970e4974c5"
+  },
+  {
+    "index": 6,
+    "id": "79c8414a-22e3-4f08-8e79-8b6a61fa8526",
+    "repo": "huggingface/transformers",
+    "commit": "02c324f43fe0ef5d484e846417e5f3bf4484524c",
+    "pr": 41934,
+    "question": "When both rope_scaling and rope_parameters are provided during initialization, how does the configuration handle merging them for the full_attention case?",
+    "ground_truth_answer": "In Gemma3TextConfig.__init__ (src/transformers/models/gemma3/configuration_gemma3.py), when rope_scaling is present and rope_parameters already exists with a 'full_attention' key, the code calls rope_parameters['full_attention'].update(rope_scaling) to merge the rope_scaling values into the existing full_attention parameters. If rope_parameters exists but lacks a 'full_attention' key, it instead calls rope_parameters.update(rope_scaling) to merge at the top level.",
+    "facts": [
+      "In Gemma3TextConfig.__init__, when rope_scaling is provided and rope_parameters contains a 'full_attention' key, the code calls rope_parameters['full_attention'].update(rope_scaling) to merge rope_scaling into the existing full_attention parameters",
+      "If rope_parameters exists but lacks a 'full_attention' key, the code calls rope_parameters.update(rope_scaling) to merge rope_scaling at the top level",
+      "The merging logic is implemented in src/transformers/models/gemma3/configuration_gemma3.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/gemma3/configuration_gemma3.py",
+        "src/transformers/models/gemma3/modular_gemma3.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "When both `rope_scaling` and `rope_parameters` are provided during initialization, the configuration prioritizes `rope_scaling` for the `full_attention` case. This behavior is observed in several model configurations within the `huggingface/transformers` repository.\n\nSpecifically, the `rope_scaling` value, if present in `kwargs`, is extracted and then assigned to `self.rope_parameters`  . If `rope_scaling` is `None`, then the existing `rope_parameters` value is used instead  .\n\nFor models that differentiate between \"full_attention\" and \"sliding_attention\" layer types, such as `Gemma3TextConfig`  and `Qwen3NextConfig` , if `rope_scaling` is provided, it is specifically assigned to the `full_attention` key within the `rope_parameters` dictionary . The `sliding_attention` type typically receives a default `rope_type` of \"default\" .\n\nThis logic is encapsulated in the `standardize_rope_params` helper function . When `rope_theta` is a dictionary (indicating different RoPE parameters per layer type), the function iterates through `layer_types` . For each `layer_type`, it constructs the `rope_parameters` entry, using the provided `rope_theta` for that specific layer type .\n\nNotes:\nThe `rope_scaling` parameter is a legacy or alternative way to specify RoPE scaling, and its presence overrides or influences the structure of `rope_parameters` for backward compatibility or specific model architectures. The `standardize_rope_params` function ensures that the `rope_parameters` attribute of the configuration object is correctly populated and validated, handling cases where `rope_scaling` might be provided instead of a fully structured `rope_parameters` dictionary .\n\nWiki pages you might want to explore:\n- [Multimodal and Vision-Language Models (huggingface/transformers)](/wiki/huggingface/transformers#5.3)\n\nView this search on DeepWiki: https://deepwiki.com/search/when-both-ropescaling-and-rope_6547ad9b-be50-45f6-a52f-554706cd7bb1"
+  },
+  {
+    "index": 7,
+    "id": "b9d16774-f35b-4b7e-b639-9d62029d4a80",
+    "repo": "huggingface/transformers",
+    "commit": "fd36275be2f3e56bc20da01f1f320b623b413957",
+    "pr": 41930,
+    "question": "What is the purpose of the _can_record_outputs class attribute added to the vision transformer classes, and which module types are mapped for tracking hidden states versus attentions?",
+    "ground_truth_answer": "The _can_record_outputs dictionary maps output types to the specific layer classes where those outputs should be captured. In both SiglipVisionTransformer and Siglip2VisionTransformer (src/transformers/models/siglip/modeling_siglip.py and src/transformers/models/siglip2/modeling_siglip2.py), it maps \"hidden_states\" to the respective EncoderLayer class (SiglipEncoderLayer or Siglip2EncoderLayer) and \"attentions\" to the respective Attention class (SiglipAttention or Siglip2Attention). This enables the model to track and return intermediate outputs from the correct layer types when output_hidden_states or output_attentions is requested.",
+    "facts": [
+      "The _can_record_outputs dictionary maps output types to specific layer classes where those outputs should be captured",
+      "In SiglipVisionTransformer, _can_record_outputs maps 'hidden_states' to SiglipEncoderLayer and 'attentions' to SiglipAttention",
+      "In Siglip2VisionTransformer, _can_record_outputs maps 'hidden_states' to Siglip2EncoderLayer and 'attentions' to Siglip2Attention",
+      "This mapping enables the model to track and return intermediate outputs from correct layer types when output_hidden_states or output_attentions is requested"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/siglip/modeling_siglip.py",
+        "src/transformers/models/siglip2/modeling_siglip2.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The `_can_record_outputs` class attribute is used in `PreTrainedModel` subclasses to specify which module types correspond to \"hidden states\" and \"attentions\" for the purpose of recording these outputs during model execution  . This mechanism allows for intercepting specific layer outputs without relying on traditional hooks, making it compatible with `torch.compile` (Dynamo tracing) .\n\nFor vision transformer classes, the `_can_record_outputs` attribute maps output names like `\"hidden_states\"` and `\"attentions\"` to specific module classes or `OutputRecorder` configurations .\n\nHere are examples of how different vision transformer classes map module types for tracking hidden states and attentions:\n\n*   **`Idefics3VisionTransformer`**:\n    *   `\"hidden_states\"` are mapped to `Idefics3EncoderLayer` .\n    *   `\"attentions\"` are mapped to `Idefics3VisionAttention` .\n\n*   **`SmolVLMVisionTransformer`**:\n    *   `\"hidden_states\"` are mapped to `SmolVLMEncoderLayer` .\n    *   `\"attentions\"` are mapped to `SmolVLMVisionAttention` .\n\n*   **`InternVLVisionPreTrainedModel`**:\n    *   `\"hidden_states\"` are mapped to `InternVLVisionLayer` .\n    *   `\"attentions\"` are mapped to `InternVLVisionAttention` .\n\n*   **`ViTPreTrainedModel`**:\n    *   `\"hidden_states\"` are mapped to `ViTLayer` .\n    *   `\"attentions\"` are mapped to `ViTSelfAttention` .\n\n*   **`SamHQVisionEncoder`**:\n    *   `\"hidden_states\"` are mapped to `SamHQVisionLayer` .\n    *   `\"attentions\"` are mapped to `SamHQVisionAttention` .\n\nThe `_can_record_outputs` attribute can also use `OutputRecorder` objects to provide more granular control, such as specifying an `index` for tuple outputs or a `layer_name` for specific submodules . For example, in `BltPreTrainedModel`, `\"hidden_states\"` are recorded from `BltTransformerLayer` at `index=0` and `\"attentions\"` from `BltSelfAttention` at `index=1`, both within the `\"local_decoder\"` layer . Similarly, `T5GemmaDecoder` uses `OutputRecorder` for both `\"attentions\"` and `\"cross_attentions\"` .\n\nThe `check_model_inputs` decorator, defined in `src/transformers/utils/generic.py`, utilizes this `_can_record_outputs` information to dynamically capture outputs during the forward pass  . It checks for `output_attentions` and `output_hidden_states` flags in the model's configuration or `kwargs` to determine whether to record these outputs . If recording attentions is requested, it also ensures that the attention implementation is compatible (e.g., \"eager\", \"eager_paged\", \"flex_attention\") .\n\nNotes:\nThe `_can_record_outputs` attribute is a dictionary that maps output names (e.g., \"attentions\", \"hidden_states\") to either a module class or an `OutputRecorder` object . The `OutputRecorder` class provides additional parameters like `index` and `layer_name` for more precise output capture . This mechanism is crucial for debugging and analyzing model internals, especially in complex architectures like vision transformers.\n\nWiki pages you might want to explore:\n- [Core Architecture (huggingface/transformers)](/wiki/huggingface/transformers#2)\n\nView this search on DeepWiki: https://deepwiki.com/search/what-is-the-purpose-of-the-can_dabce34f-b46b-4fa1-baf2-bbd6dcc7b1ba"
+  },
+  {
+    "index": 8,
+    "id": "75223613-3fb7-4e6e-b095-eac463331937",
+    "repo": "huggingface/transformers",
+    "commit": "020e713ac8e70bd2e72bcd12dc6bd1ada6162562",
+    "pr": 41897,
+    "question": "Which additional backward data types are now supported alongside the existing bf16 option, and what additional validation constraint must be satisfied when using them?",
+    "ground_truth_answer": "In FPQuantConfig.post_init (src/transformers/utils/quantization_config.py), the supported backward_dtype values are now 'bf16', 'mxfp8', and 'mxfp4'. When using 'mxfp8' or 'mxfp4' for backward_dtype, forward_dtype must be set to 'mxfp4' - other forward dtype combinations with non-bf16 backwards are rejected with a ValueError.",
+    "facts": [
+      "FPQuantConfig.post_init in src/transformers/utils/quantization_config.py now supports backward_dtype values of 'bf16', 'mxfp8', and 'mxfp4'",
+      "When backward_dtype is set to 'mxfp8' or 'mxfp4', forward_dtype must be set to 'mxfp4'",
+      "Combinations with non-bf16 backward_dtype and forward_dtype other than 'mxfp4' are rejected with a ValueError"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/utils/quantization_config.py",
+        "src/transformers/integrations/fp_quant.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The `FPQuantConfig` class, used for quantization with the FPQuant method, currently only supports `\"bf16\"` as the `backward_dtype` . An additional validation constraint is that if any other value is provided for `backward_dtype`, a `ValueError` will be raised .\n\n## Supported Backward Data Types \n\nThe `FPQuantConfig` class, which is part of the `transformers` library's quantization utilities, defines configuration options for the FPQuant method . Within this configuration, the `backward_dtype` argument specifies the data type to be used for the backward pass . As of the current implementation, only `\"bf16\"` (bfloat16) is supported for this parameter .\n\n## Validation Constraint \n\nThe `post_init` method of the `FPQuantConfig` class includes a safety checker that validates the provided arguments . Specifically, for the `backward_dtype`, it checks if the value is `\"bf16\"` . If `self.backward_dtype` is not equal to `\"bf16\"`, a `ValueError` is raised with the message \"Only 'bf16' is supported for backward_dtype for now.\" . This means that no other backward data types are currently supported for the FPQuant method.\n\nNotes:\nThe user's prompt specifically asks about \"additional backward data types\" supported alongside `bf16`. The provided code clearly indicates that no other backward data types are currently supported for the `FPQuantConfig` . The `TrainingArguments` class also mentions `bf16` and `fp16` for mixed precision training , but this is in the context of general training arguments and not specifically for the `FPQuant` method's backward pass data types.\n\nWiki pages you might want to explore:\n- [Core Architecture (huggingface/transformers)](/wiki/huggingface/transformers#2)\n\nView this search on DeepWiki: https://deepwiki.com/search/which-additional-backward-data_965dbe43-1e6c-4d1f-b67d-feac1cf64bcb"
+  },
+  {
+    "index": 9,
+    "id": "bfac5452-2354-4cf0-b68c-901ea83949dc",
+    "repo": "huggingface/transformers",
+    "commit": "80134e6e663db962c30d0e45c54265b3141bc7c7",
+    "pr": 41894,
+    "question": "How does the quantizer determine whether to apply configuration directly to a module's weight parameter versus applying it to a custom parameter name when using FqnToConfig?",
+    "ground_truth_answer": "In TorchAoQuantizer.create_quantized_param (src/transformers/quantizers/quantizer_torchao.py), after matching the FQN to a config, it checks if `top_level_param_name == \"weight\"`. If true, it applies the config directly using `quantize_(module, c, (lambda x, fqn: True))`. For custom parameter names (like gate_up_proj), it wraps the config in a new FqnToConfig mapping the parameter name to the config, then calls `quantize_(module, custom_param_fqn_config, filter_fn=None)`.",
+    "facts": [
+      "In TorchAoQuantizer.create_quantized_param, after matching FQN to a config, it checks if top_level_param_name equals 'weight'",
+      "When top_level_param_name is 'weight', the config is applied directly using quantize_(module, c, (lambda x, fqn: True))",
+      "For custom parameter names like gate_up_proj, the config is wrapped in a new FqnToConfig mapping the parameter name to the config",
+      "For custom parameters, quantize_(module, custom_param_fqn_config, filter_fn=None) is called with the wrapped config"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/quantizers/quantizer_torchao.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The quantizer determines how to apply configuration using the `ModuleFqnToConfig` class, which allows for both direct module Fully Qualified Names (FQNs) and regular expressions to specify quantization configurations . This is handled within the `create_quantized_param` method of the `TorchAoHfQuantizer` class .\n\n### Configuration Application Logic\n\nWhen `TorchAoHfQuantizer.create_quantized_param` is called, it first extracts the module's FQN from the `param_name` . It then checks the `ModuleFqnToConfig` instance, which is obtained from `self.quantization_config.get_apply_tensor_subclass()` .\n\nThe `ModuleFqnToConfig` contains a dictionary, `module_fqn_to_config`, which maps FQNs or regex patterns to specific quantization configurations . The quantizer applies the configuration based on the following precedence:\n\n1.  **Direct FQN Match**: It first checks if the exact `module_fqn` exists as a key in `module_fqn_to_config` . If a direct match is found, that configuration is used .\n2.  **Regex Match**: If no direct FQN match is found, it iterates through the keys in `module_fqn_to_config` that start with `\"re:\"` . It uses `re.fullmatch` to check if the `module_fqn` fully matches any of these regex patterns . The configuration for the first fully matched regex pattern is applied .\n3.  **Default Configuration**: If neither a direct FQN nor a regex match is found, it falls back to the configuration associated with the `\"_default\"` key in `module_fqn_to_config`, if one exists .\n\nOnce a configuration `c` is determined (and if `c` is not `None`), the `quantize_` function from `torchao.quantization` is called to apply the quantization to the module .\n\n### Example Usage\n\nThe documentation provides examples of how `ModuleFqnToConfig` is used:\n*   To skip quantization for a specific layer, you can set its configuration to `None` . For instance, `{\"_default\": config, \"model.layers.0.self_attn.q_proj\": None}` will apply a default configuration to all layers except `model.layers.0.self_attn.q_proj` .\n*   To apply different quantization configurations to different layers, you can specify them directly by their FQN . For example, `{\"_default\": linear_config, \"model.decoder.embed_tokens\": embedding_config}` applies `linear_config` by default and `embedding_config` to `model.decoder.embed_tokens` .\n*   Regex can be used to apply configurations to multiple modules matching a pattern, such as `re:model\\.decoder\\.layers\\..+\\.self_attn\\.q_proj` .\n\n### Precedence in Tests\n\nTests confirm this precedence, showing that a fully specified module FQN takes the highest precedence, followed by regex matches, and then the `_default` configuration .\n\nNotes:\nThe `TorchAoConfig` class is a `QuantizationConfigMixin` that holds the `quant_type` which can be a string or an `AOBaseConfig` instance . When `quant_type` is an instance of `ModuleFqnToConfig`, the logic described above is triggered .\n\nWiki pages you might want to explore:\n- [Core Architecture (huggingface/transformers)](/wiki/huggingface/transformers#2)\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-quantizer-determi_bafceb48-481c-4d03-a873-76a59f9e43bd"
+  }
+]

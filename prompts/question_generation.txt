@@ -1,0 +1,93 @@
+You are helping build a high-quality dataset of real-world codebase questions to test our search AI agents. Each question should require the agent to search through the codebase to find the relevant code.
+
+# Guidelines
+
+Your task is to generate 3-5 onboarding questions adhering to these guidelines:
+
+- The question must be clearly grounded in the provided code context.
+- Do not include exact file paths, line numbers, or raw code snippets in the question text.
+- Prefer questions involving relationships across multiple functions, components, or files.
+- Keep the wording concise, clear, and readable.
+- Avoid vague references to code elements like 'the function' or 'that class'.
+- Don't make identifier references (function names, class names, variables, etc.) too obvious, so that the search will be as challenging as possible.
+- Despite the above, the question should still be answerable, and the context should be unambiguous.
+- The question should be answerable with a short, concise response—ideally 2-3 sentences maximum.
+- The question should ask just one concept, rather than being too complex and multi-part.
+
+# Scopes
+
+There are 2 kinds of scopes:
+
+**DEEP questions**: When the code involves 1-2 files or specific components, generate highly specific questions that explore internal logic, error handling, edge cases, or detailed behaviors within those components.
+
+**BROAD questions**: When the code involves multiple files or a larger context, generate higher-level questions about architecture, overall flow, interactions between modules, or general system design.
+
+# Core vs Non-Core
+
+**Core questions**: Target fundamental, core functionality that developers need to understand to work with this part of the codebase.
+
+**Non-core questions**: Focus on peripheral technical aspects, edge cases, or optimization details.
+
+Aim for a mix of both, but prioritize core questions.
+
+# PR Context
+
+Use the PR title and description to infer the high-level subject area. Think of questions that a developer would need to answer to understand this part of the codebase. The questions must be answerable using the provided code context.
+Do NOT ask questions about the PR itself, and change histories. Questions should be answerable from looking at the code only, not the PR.
+
+When making a question, ensure that you are SPECIFIC about different components - try to provide class names 
+where possible and file names to ground the questions, unless the intent is to be broad.
+
+# Examples
+
+**Broad question examples:**
+- What is the general workflow for training and deploying a transformer-based language model?
+- Can you describe the internal steps involved in performing hyperparameter tuning with a grid search?
+- What's the end-to-end flow involved in generating images using diffusion-based models?
+
+**Deep question examples:**
+- How are gradient updates managed when training gradient-boosted decision trees on sparse data?
+- Which parameter directly controls the number of leaves permitted in each decision tree of a gradient boosting algorithm?
+- How does a functional deep learning API internally handle merging layers with multiple input tensors?
+
+**Core question examples:**
+- How are token and positional embeddings combined and fed into the BERT model?
+- How does the Keras Layer base class manage weight creation and the build/call lifecycle?
+- What happens in one XGBoost boosting iteration—how are new trees grown and combined?
+
+---
+
+# PR Information
+
+**Title**: {title}
+**PR Number**: {pr_number}
+**Description**: {body}
+
+# Code Context
+
+The code below shows the actual implementation. If shown in diff format, lines with '+' are additions, 
+lines with '-' are removals, and unmarked lines provide surrounding context.
+
+{files_content}
+
+---
+
+# Task
+
+Based on the PR information and code above, generate 1 question that tests understanding of this codebase area. The question
+should reflect some component of the codebase that is encapsulated within the PR.
+
+Return your response as JSON:
+```json
+{{
+  "questions": [
+    {{
+      "question": "...",
+      "answer": "...",
+      "scope": "broad|deep",
+      "is_core_question": true|false,
+      "key_files": ["file1.py", "file2.py"]
+    }}
+  ]
+}}
+```

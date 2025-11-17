@@ -1,0 +1,71 @@
+You are helping filter PRs to identify which ones contain sufficient substance for generating meaningful codebase questions.
+
+# Task
+
+Determine whether this PR is suitable for generating high-quality technical questions that would help developers understand the codebase.
+
+# Criteria for ACCEPT (return true)
+
+A PR should be accepted if it meets MOST of these criteria:
+- Contains non-trivial code changes (not just formatting, typos, or config tweaks)
+- The PR description provides meaningful context about what changed and why
+- The code changes involve actual logic, algorithms, or architectural decisions
+- There's enough substance to ask questions about how components work or interact
+- A developer would need to understand this code to work on related features
+
+# Criteria for REJECT (return false)
+
+A PR should be rejected if it matches ANY of these:
+- Empty or near-empty PR description (just a title, or "see title", or no explanation)
+- Trivial changes only: typo fixes, formatting, whitespace, comment updates
+- Pure configuration changes with no logic (changing version numbers, build configs)
+- Automated dependency updates with no code changes
+- Simple find-and-replace refactoring (renaming variables/functions across files)
+- Deleting code without adding new logic
+- The code context is too minimal to generate substantive questions
+
+# Examples
+
+**ACCEPT examples:**
+- PR adds a new authentication flow with error handling
+- PR refactors a complex algorithm and changes how it processes data
+- PR implements a new API endpoint with validation logic
+- PR fixes a bug by changing control flow and adding edge case handling
+
+**REJECT examples:**
+- PR: "Update version to 2.0.1" (config only)
+- PR: "Fix typo in comment" (trivial)
+- PR: "Bump dependency versions" (automated, no logic changes)
+- PR description: "Updates" or just the title repeated (no context)
+- PR: "Remove unused imports" (cleanup only)
+
+---
+
+# PR Information
+
+**Title**: {title}
+**PR Number**: {pr_number}
+**Description**: {body}
+
+# Code Context
+
+{files_content}
+
+---
+
+# Your Decision
+
+Analyze the PR and determine if it's suitable for question generation.
+
+Return your response as JSON:
+```json
+{{
+  "accept": true|false,
+  "reasoning": "<1-2 sentences explaining why you accepted or rejected this PR>",
+  "substance_level": "high|medium|low"
+}}
+```
+
+- `accept`: true if suitable for questions, false otherwise
+- `reasoning`: Brief explanation of your decision
+- `substance_level`: Your assessment of how much technical substance this PR contains

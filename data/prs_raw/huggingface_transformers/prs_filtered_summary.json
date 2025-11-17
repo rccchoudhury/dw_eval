@@ -1,0 +1,11 @@
+{
+  "total_prs": 50,
+  "accepted": 31,
+  "rejected": 19,
+  "acceptance_rate": 0.62,
+  "by_substance_level": {
+    "high": 14,
+    "medium": 17,
+    "low": 0
+  }
+}

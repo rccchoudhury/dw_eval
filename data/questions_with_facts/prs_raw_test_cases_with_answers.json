@@ -1,0 +1,1966 @@
+[
+  {
+    "index": 0,
+    "id": "bd0cf257-c2c2-4641-ad83-d90075c32c01",
+    "repo": "prs/raw",
+    "commit": "04f9d2bf3d26e026244a13111d2f18bc95a5bb04",
+    "pr": 12593,
+    "question": "How does the rotary position embedding generation differ when processing exactly 2 frames versus a larger number of frames?",
+    "ground_truth_answer": "In ChronoEditRotaryPosEmbed.forward (src/diffusers/models/transformers/transformer_chronoedit.py), when num_frames equals 2, the temporal frequency components (freqs_cos_f and freqs_sin_f) are created by selecting only the first and last indices from the pre-computed frequencies up to temporal_skip_len (using [[0, -1]]). For other frame counts, the frequencies are taken sequentially from 0 to ppf. This special handling for 2 frames ensures proper positional encoding for the start and end frames in the editing task.",
+    "facts": [
+      "ChronoEditRotaryPosEmbed.forward in src/diffusers/models/transformers/transformer_chronoedit.py handles num_frames=2 as a special case",
+      "When num_frames equals 2, freqs_cos_f and freqs_sin_f are created by selecting only the first and last indices from pre-computed frequencies using [[0, -1]] up to temporal_skip_len",
+      "For other frame counts, the frequencies are taken sequentially from index 0 to ppf",
+      "The special handling for 2 frames ensures proper positional encoding for the start and end frames in the editing task"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/models/transformers/transformer_chronoedit.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The rotary position embedding generation for video frames, particularly within the CogVideoX pipelines, differentiates its approach based on whether the `patch_size_t` configuration is defined. This parameter, `patch_size_t`, is used to determine if the model is a CogVideoX 1.0 or CogVideoX 1.5 variant, which then dictates how the temporal dimension is handled for rotary embeddings.\n\n### Rotary Position Embedding Generation\n\nThe core logic for preparing rotary positional embeddings is found in the `_prepare_rotary_positional_embeddings` method, which is consistently implemented across `CogVideoXPipeline`, `CogVideoXFunControlPipeline`, and `CogVideoXImageToVideoPipeline`. This method calculates `freqs_cos` and `freqs_sin` which are then used to apply rotary positional embeddings to the hidden states of the transformer model.\n\nThe distinction in rotary position embedding generation depends on the value of `p_t`, which is `self.transformer.config.patch_size_t`.\n\n#### Case 1: `p_t is None` (CogVideoX 1.0)\n\nWhen `p_t` is `None`, it signifies the CogVideoX 1.0 model architecture. In this scenario, the `get_3d_rotary_pos_embed` function is called with `crops_coords` derived from `get_resize_crop_region_for_grid`. The `temporal_size` parameter passed to `get_3d_rotary_pos_embed` is the original `num_frames`.\n\nThe `get_3d_rotary_pos_embed` function then calculates temporal, height, and width frequencies using `get_1d_rotary_pos_embed`. These frequencies are then broadcast and concatenated to form the final 3D positional embeddings.\n\n#### Case 2: `p_t is not None` (CogVideoX 1.5)\n\nIf `p_t` is not `None`, it indicates the CogVideoX 1.5 model architecture. In this case, a `base_num_frames` is calculated by dividing `num_frames` by `p_t` and rounding up. The `get_3d_rotary_pos_embed` function is called with `crops_coords=None`, `temporal_size=base_num_frames`, `grid_type=\"slice\"`, and `max_size` parameters.\n\nWhen `grid_type` is \"slice\", `get_3d_rotary_pos_embed` uses `torch.arange` to create grids for height, width, and temporal dimensions up to their respective `max_size` or `temporal_size`. The temporal frequencies (`freqs_t`) are then sliced to match the `temporal_size` (which is `base_num_frames` in this case). This implies that for CogVideoX 1.5, the temporal dimension of the rotary embeddings is effectively scaled or downsampled by `p_t`.\n\n### Processing Exactly 2 Frames vs. Larger Number of Frames\n\nThe primary difference when processing exactly 2 frames versus a larger number of frames lies in how the `temporal_size` is handled, specifically when `p_t` is not `None` (CogVideoX 1.5).\n\n*   **When `p_t is None` (CogVideoX 1.0):** The `temporal_size` passed to `get_3d_rotary_pos_embed` is always the actual `num_frames`. So, if `num_frames` is 2, the temporal dimension for rotary embeddings will be based on 2 frames. If `num_frames` is larger, it will be based on that larger number.\n\n*   **When `p_t is not None` (CogVideoX 1.5):** The `temporal_size` passed to `get_3d_rotary_pos_embed` is `base_num_frames = (num_frames + p_t - 1) // p_t`.\n    *   If `num_frames` is 2, and `p_t` is, for example, 1, then `base_num_frames` would be 2.\n    *   If `num_frames` is 2, and `p_t` is, for example, 2, then `base_num_frames` would be 1.\n    *   If `num_frames` is 2, and `p_t` is, for example, 4, then `base_num_frames` would be 1.\n    *   For a larger `num_frames`, `base_num_frames` will be `num_frames` divided by `p_t` (rounded up).\n\nTherefore, for CogVideoX 1.5, if `p_t` is greater than 1, processing exactly 2 frames might result in a `base_num_frames` of 1, effectively reducing the temporal dimension of the rotary embeddings. For a larger number of frames, the `base_num_frames` will also be scaled down by `p_t`. The `grid_type=\"slice\"` mechanism then ensures that the temporal frequencies are generated up to this `base_num_frames`."
+  },
+  {
+    "index": 1,
+    "id": "76133737-9c2c-4bbf-b73b-517399e4663d",
+    "repo": "prs/raw",
+    "commit": "f5e5f348238e3ae30ef2ba49153e2c59e709401b",
+    "pr": 12585,
+    "question": "How does the latents initialization logic handle the case when latents are provided as input versus when they need to be generated?",
+    "ground_truth_answer": "In QwenImageBeforeDenoiseBlock.__call__ (src/diffusers/modular_pipelines/qwenimage/before_denoise.py), the block first adds 'latents' to its inputs list. During execution, it checks if block_state.latents is None. Only when None does it generate new latents using randn_tensor with the specified shape, generator, device, and dtype, then packs them via components.pachifier.pack_latents. If latents are already present (not None), this generation step is skipped entirely.",
+    "facts": [
+      "QwenImageBeforeDenoiseBlock.__call__ adds 'latents' to its inputs list",
+      "The block checks if block_state.latents is None during execution",
+      "When block_state.latents is None, new latents are generated using randn_tensor with specified shape, generator, device, and dtype parameters",
+      "Generated latents are packed via components.pachifier.pack_latents method",
+      "When block_state.latents is not None, the latents generation step is skipped entirely"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/modular_pipelines/qwenimage/before_denoise.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The latents initialization logic, primarily handled by the `prepare_latents` method across various pipelines, differentiates between cases where latents are explicitly provided as input and when they need to be generated. If latents are provided, they are used directly; otherwise, new latents are generated using a random tensor. This method also handles scaling the latents based on the scheduler's initial noise sigma.\n\n## Latents Initialization Logic\n\nThe `prepare_latents` method is a common component across many diffusion pipelines, such as `StableDiffusionInpaintPipeline`, `AudioLDMPipeline`, and `StableDiffusionXLPipeline`. Its primary role is to set up the initial latent representation for the diffusion process.\n\n### When Latents are Provided\n\nIf the `latents` parameter is provided to the `prepare_latents` method, the pipeline uses these provided latents directly. The provided latents are moved to the appropriate device and data type. In some inpainting pipelines, if `latents` are provided, they are also scaled by the scheduler's `init_noise_sigma`.\n\n### When Latents Need to be Generated\n\nIf the `latents` parameter is `None`, the `prepare_latents` method generates new latents. This is typically done by creating a tensor of random noise using `randn_tensor` with the specified shape, generator, device, and data type.\n\nFor pipelines like `StableDiffusionInpaintPipeline`, if `latents` are `None` and `is_strength_max` is true, the latents are initialized purely as noise. If `is_strength_max` is false, meaning a lower strength is used, the latents are initialized as a combination of an encoded image and noise, where noise is added to the `image_latents` by the scheduler.\n\n### Scaling and Output\n\nAfter initialization (either provided or generated), the latents are scaled by the scheduler's `init_noise_sigma`. This scaling is crucial for the diffusion process.\n\nThe `prepare_latents` method can also return additional outputs such as the generated noise and the encoded image latents, depending on the `return_noise` and `return_image_latents` flags.\n\n## Example Flow\n\nThe general workflow for latent preparation can be summarized as follows:\n1. Determine the required shape for the latents based on batch size, number of channels, height, and width, adjusted by the VAE scale factor.\n2. Check if `latents` are provided as an input.\n   * If provided, use them and move them to the correct device and dtype.\n   * If not provided, generate random noise using `randn_tensor`.\n     * In inpainting pipelines, if `is_strength_max` is false, encode the input image to `image_latents` and add noise to it.\n3. Scale the resulting latents by `self.scheduler.init_noise_sigma`.\n4. Return the prepared latents and any other requested outputs."
+  },
+  {
+    "index": 2,
+    "id": "387d5f82-6730-488d-abf9-c7f7e1a106ca",
+    "repo": "prs/raw",
+    "commit": "b3e9dfced7c9e8d00f646c710766b532383f04c6",
+    "pr": 12584,
+    "question": "How does the transformer model incorporate temporal information when processing video latents during the denoising loop?",
+    "ground_truth_answer": "In SanaVideoTransformer3DModel.forward (src/diffusers/models/transformers/transformer_sana_video.py), temporal information is incorporated through two mechanisms: (1) 3D rotary position embeddings computed by WanRotaryPosEmbed that encode frame, height, and width positions, and (2) GLUMBTempConv feed-forward blocks in each transformer layer that apply temporal convolutions (conv_temp with kernel size (3,1)) across the frame dimension after spatial processing, aggregating information across time while maintaining spatial structure.",
+    "facts": [
+      "SanaVideoTransformer3DModel.forward incorporates temporal information through 3D rotary position embeddings computed by WanRotaryPosEmbed that encode frame, height, and width positions",
+      "GLUMBTempConv feed-forward blocks in each transformer layer apply temporal convolutions across the frame dimension after spatial processing",
+      "The temporal convolutions use conv_temp with kernel size (3,1) to aggregate information across time while maintaining spatial structure"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/models/transformers/transformer_sana_video.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The transformer models in the `diffusers` library incorporate temporal information in video latents during the denoising loop primarily through several mechanisms: 3D positional embeddings, temporal attention blocks, and specific handling of the `num_frames` parameter.\n\n### 3D Positional Embeddings and Patching\nModels like `CogVideoXTransformer3DModel` and `ConsisIDTransformer3DModel` are designed to handle video data by considering spatial and temporal dimensions. They use parameters such as `sample_width`, `sample_height`, and `sample_frames` to define the dimensions of the input latents. The `patch_size` and `temporal_compression_ratio` parameters further indicate how the video frames are processed into patches, which inherently captures temporal relationships by grouping frames together. The `LTXVideoTransformer3DModel` also uses `patch_size` and `patch_size_t` for spatial and temporal patching respectively. It also utilizes `LTXVideoRotaryPosEmbed` to incorporate positional embeddings, which can be scaled spatially and temporally using `spatial_interpolation_scale` and `temporal_interpolation_scale`.\n\n### Temporal Transformer Blocks\nThe `TransformerTemporalModel` explicitly processes temporal information. In its `forward` method, the `hidden_states` are reshaped to separate the batch size from the number of frames. The model then applies a series of `BasicTransformerBlock`s.\n\nThe `TransformerSpatioTemporalModel` combines spatial and temporal processing. It uses both `BasicTransformerBlock`s for spatial attention and `TemporalBasicTransformerBlock`s for temporal attention. It also incorporates a `TimestepEmbedding` and `Timesteps` to embed temporal information, which is then added to the hidden states before being passed to the temporal blocks. The `time_mixer` then blends the spatial and temporal outputs.\n\n### Denoising Loop Integration\nDuring the denoising loop in pipelines like `LattePipeline`, the `timestep` is passed to the transformer model. This `timestep` represents the current denoising step and is crucial for the model to understand the progression of the denoising process. In `LTXConditionPipeline`, `video_coords` are used to provide temporal positioning information to the transformer. The `timestep` is also adjusted based on a `conditioning_mask` for conditional generation.\n\n### Asynchronous Processing\nThe `skyreels_v2` documentation describes an asynchronous processing timeline for long videos, where `base_num_frames` acts as a sliding window size. This indicates that temporal information is processed in chunks, with overlaps between iterations to maintain continuity."
+  },
+  {
+    "index": 3,
+    "id": "b7a78743-7c17-4838-99c4-e70530a108fc",
+    "repo": "prs/raw",
+    "commit": "8f80dda193f79af3ccd0f985906d61123d69df08",
+    "pr": 12566,
+    "question": "How does the modular pipeline handle memory availability checks when enabling CPU offload, and what happens if memory information cannot be obtained for a given device?",
+    "ground_truth_answer": "In ComponentsManager.__call__ (src/diffusers/modular_pipelines/components_manager.py), the code attempts to retrieve available memory using device_module.mem_get_info(execution_device.index)[0]. If this fails with an AttributeError (for devices that don't support this method), it raises a descriptive AttributeError indicating it doesn't know how to obtain memory info for that device module. The enable_auto_cpu_offload method includes a TODO comment noting that a warning should be added when mem_get_info isn't available on the target device.",
+    "facts": [
+      "ComponentsManager.__call__ retrieves available memory using device_module.mem_get_info(execution_device.index)[0]",
+      "If mem_get_info fails with AttributeError, the code raises a descriptive AttributeError indicating it cannot obtain memory info for that device module",
+      "The enable_auto_cpu_offload method contains a TODO comment noting that a warning should be added when mem_get_info isn't available on the target device"
+    ],
+    "metadata": {
+      "difficulty": "moderate",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/modular_pipelines/components_manager.py"
+      ],
+      "is_core_question": false
+    },
+    "status": "completed",
+    "deepwiki_answer": "The modular pipeline in `diffusers` handles memory availability checks during CPU offload through the `AutoOffloadStrategy` class, which is used by the `ComponentsManager` when `enable_auto_cpu_offload` is activated. This strategy determines which models to offload to the CPU based on the available memory on the execution device. If memory information cannot be obtained for a given device, the system will likely encounter an error during the `device_module.mem_get_info` call, as this function is expected to return memory details.\n\n## Memory Availability Checks\n\nWhen `enable_auto_cpu_offload` is called on a `ComponentsManager` instance, it sets up `CustomOffloadHook`s for each `torch.nn.Module` component. The `AutoOffloadStrategy` is then used to manage these hooks.\n\nInside the `AutoOffloadStrategy`'s `__call__` method, the memory footprint of the current model (`model.get_memory_footprint()`) is obtained. It then checks the available memory on the execution device using `device_module.mem_get_info(execution_device.index)[0]`. A `memory_reserve_margin` is subtracted from the total available memory to ensure some free space is maintained.\n\nIf the `current_module_size` is greater than the `mem_on_device` (after reserving the margin), the strategy calculates `min_memory_offload` and searches for the best combination of currently loaded models to offload to the CPU. The `search_best_candidate` function attempts to find a set of models whose combined size is just enough to free up the required memory.\n\n## Handling Unavailable Memory Information\n\nThe memory availability check relies on `torch.<device_type>.mem_get_info(execution_device.index)`. If `mem_get_info` fails to provide memory information for a given device, it would likely raise an exception, as the code expects a tuple containing memory information. This would prevent the `AutoOffloadStrategy` from correctly determining memory availability and subsequently from making informed decisions about which models to offload.\n\n## CPU Offload Mechanism\n\nThe `enable_auto_cpu_offload` method in `ComponentsManager` first removes any existing hooks from the components. It then initializes an `AutoOffloadStrategy` and determines the execution device. For each `torch.nn.Module` component, a `custom_offload_with_hook` is applied, which uses the defined `offload_strategy`. These hooks are then interconnected to allow for coordinated offloading.\n\nThe general principle of CPU offloading is that models start on the CPU, move to the execution device when their forward pass is called, and are moved back to the CPU if memory is insufficient."
+  },
+  {
+    "index": 4,
+    "id": "71950bf7-d8ed-4588-a54d-9edaae7ae5c2",
+    "repo": "prs/raw",
+    "commit": "250f5cb53db1554f32dee07ad002f6c3834306d0",
+    "pr": 12549,
+    "question": "What specific condition causes the AITER flash attention implementation to force return_lse to True even when the caller requests it to be False?",
+    "ground_truth_answer": "In _aiter_flash_attention (src/diffusers/models/attention_dispatch.py), when gradients are enabled (torch.is_grad_enabled() returns True) and return_lse is False, the implementation forces return_lse=True in the call to aiter_flash_attn_func because the aiter library requires it by assertion when gradients are enabled. The function then extracts only the output tensor to return if the caller didn't want lse.",
+    "facts": [
+      "In _aiter_flash_attention (src/diffusers/models/attention_dispatch.py), when torch.is_grad_enabled() returns True and return_lse is False, the implementation forces return_lse=True",
+      "The aiter library requires return_lse=True by assertion when gradients are enabled",
+      "When the caller sets return_lse=False but it was forced to True, the function extracts only the output tensor and discards the lse value before returning"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/models/attention_dispatch.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The AITER flash attention implementation, specifically `_flash_attention_forward_op` in `huggingface/diffusers/src/diffusers/models/attention_dispatch.py`, forces `return_lse` to `True` under two conditions, even if the caller requests it to be `False`. This is done to ensure that the log-sum-exp (LSE) is always computed when needed for backward pass or context parallelism.\n\nThe conditions are:\n1. If any of the input tensors (`query`, `key`, `value`) require gradients (`grad_enabled` is `True`).\n2. If context parallelism is enabled and the world size is greater than 1.\n\nIn these cases, the `dropout_p` parameter is set to a small non-zero value (`1e-30`) if it was originally 0. This is a workaround because the flash-attention library only returns LSE if `dropout_p` is greater than 0. The `_wrapped_flash_attn_forward` function is then called with `return_lse` explicitly set to `True`.\n\n### Trace of `_flash_attention_forward_op` usage\n\nThe `_flash_attention_forward_op` function is used as the `forward_op` for `TemplatedRingAttention` when context parallelism is enabled for the `FLASH` attention backend.\n\nThe `_flash_attention` function, which is registered as the `FLASH` attention backend, checks if `_parallel_config` is `None`.\nIf `_parallel_config` is not `None`, it means context parallelism is active, and it calls `_templated_context_parallel_attention`.\nThe `_templated_context_parallel_attention` function then calls `TemplatedRingAttention.apply` if `ring_degree` is greater than 1.\nInside `TemplatedRingAttention.forward`, the `forward_op` (which is `_flash_attention_forward_op` in this case) is called with `return_lse` explicitly set to `True`. This ensures that LSE is always returned when context parallelism is active, regardless of the initial `return_lse` value passed to `_flash_attention`."
+  },
+  {
+    "index": 5,
+    "id": "8f820e8a-98de-4827-b863-acacd8de2099",
+    "repo": "prs/raw",
+    "commit": "84e16575e4c5e90b6b49301cfa162ced4cf478d2",
+    "pr": 12545,
+    "question": "How does the text encoder's output get transformed before being fed into the transformer blocks?",
+    "ground_truth_answer": "In BriaFiboPipeline.get_prompt_embeds (src/diffusers/pipelines/bria_fibo/pipeline_bria_fibo.py), the text_encoder generates hidden states from tokenized input. The last two layers of these hidden states are concatenated along the feature dimension to form prompt_embeds. Then, in encode_prompt, these embeddings are padded to max_sequence_length and individual hidden_state layers are passed through caption_projection modules (defined in BriaFiboTransformer2DModel in src/diffusers/models/transformers/transformer_bria_fibo.py) which project from text_encoder_dim to inner_dim//2 before being concatenated with the main prompt embeddings for each transformer block.",
+    "facts": [
+      "In BriaFiboPipeline.get_prompt_embeds, the text_encoder generates hidden states from tokenized input",
+      "The last two layers of hidden states are concatenated along the feature dimension to form prompt_embeds",
+      "The embeddings are padded to max_sequence_length in encode_prompt",
+      "Individual hidden_state layers are passed through caption_projection modules defined in BriaFiboTransformer2DModel",
+      "The caption_projection modules project from text_encoder_dim to inner_dim//2",
+      "The projected embeddings are concatenated with the main prompt embeddings for each transformer block"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/pipelines/bria_fibo/pipeline_bria_fibo.py",
+        "src/diffusers/models/transformers/transformer_bria_fibo.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The transformation of the text encoder's output before being fed into the transformer blocks varies depending on the specific transformer model being used. Generally, the text encoder's output, often referred to as `encoder_hidden_states` or `text_embed`, undergoes an initial embedding or projection, and in some cases, concatenation with other embeddings or positional encodings.\n\n### Kandinsky5Transformer3DModel\n\nIn the `Kandinsky5Transformer3DModel`, the `encoder_hidden_states` are first processed by `self.text_embeddings`. This `text_embed` is then combined with `text_rope` (positional embeddings) before being passed to the `Kandinsky5TransformerEncoderBlock`s.\n\nThe `Kandinsky5TransformerEncoderBlock` further modulates the `text_embed` using `Kandinsky5Modulation` based on `time_embed`. This modulation involves chunking the output into `self_attn_params` and `ff_params`, which are then used to apply shifts, scales, and gates to the input `x` (which is the `text_embed` in this context) before and after self-attention and feed-forward layers.\n\n### SD3Transformer2DModel\n\nFor the `SD3Transformer2DModel`, the `encoder_hidden_states` are transformed by `self.context_embedder`. This processed `encoder_hidden_states` is then directly passed to the `transformer_blocks`.\n\n### FluxTransformer2DModel and ChromaTransformer2DModel\n\nIn `FluxTransformer2DModel` and `ChromaTransformer2DModel`, the `encoder_hidden_states` are concatenated with `hidden_states` (visual embeddings) before being passed to the transformer blocks. Specifically, in `FluxSingleTransformerBlock`, the `encoder_hidden_states` are concatenated with `hidden_states` at the beginning of the `forward` pass.\n\n### HunyuanVideoFramepackTransformer3DModel\n\nIn `HunyuanVideoFramepackTransformer3DModel`, the `encoder_hidden_states` are processed by `self.context_embedder`. Additionally, `encoder_hidden_states_image` (derived from `image_embeds` via `self.image_projection`) is concatenated with the processed `encoder_hidden_states`. An `encoder_attention_mask` is also concatenated and adjusted. This combined `encoder_hidden_states` and `attention_mask` are then used in the transformer blocks.\n\n### SanaTransformer2DModel\n\nFor `SanaTransformer2DModel`, the `encoder_hidden_states` are first passed through `self.caption_projection` and then `self.caption_norm`. The resulting `encoder_hidden_states` are then fed into the transformer blocks.\n\n### CogView3PlusTransformerBlock and CogView4TransformerBlock\n\nIn `CogView3PlusTransformerBlock` and `CogView4TransformerBlock`, the `encoder_hidden_states` are normalized and modulated along with `hidden_states` (visual embeddings) using an AdaLayerNormZero-like mechanism. This process generates various gates, shifts, and scales that are applied to both `hidden_states` and `encoder_hidden_states` throughout the attention and feed-forward layers within the block."
+  },
+  {
+    "index": 6,
+    "id": "f063ad15-2e3c-496e-ad81-e89b43642033",
+    "repo": "prs/raw",
+    "commit": "d8e4805816df32ccecc070ccd6895e35cdafa723",
+    "pr": 12526,
+    "question": "How does the face adapter integrate its output with the main transformer hidden states during video generation?",
+    "ground_truth_answer": "In WanAnimateTransformer3DModel.forward (src/diffusers/models/transformers/transformer_wan_animate.py), the face adapter is applied every `inject_face_latents_blocks` transformer blocks (default 5). After each qualifying block, the face adapter output is moved to the hidden_states device if necessary (for model parallelism), then added residually to the transformer hidden_states: `hidden_states = face_adapter_output + hidden_states`.",
+    "facts": [
+      "In WanAnimateTransformer3DModel.forward, the face adapter is applied every `inject_face_latents_blocks` transformer blocks (default value is 5)",
+      "After each qualifying block, the face adapter output is moved to the hidden_states device if necessary to handle model parallelism",
+      "The face adapter output is integrated via residual addition: `hidden_states = face_adapter_output + hidden_states`"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/models/transformers/transformer_wan_animate.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The face adapter integrates its output with the main transformer hidden states primarily within the `ConsisIDTransformer3DModel` by applying the output of a `PerceiverCrossAttention` module to the `hidden_states` during the forward pass. This integration occurs conditionally, specifically when the `is_train_face` flag is enabled.\n\n### Face Adapter Integration in `ConsisIDTransformer3DModel`\n\nThe `ConsisIDTransformer3DModel` is a Transformer model designed for video-like data, used in the ConsisID framework. During its forward pass, if `is_train_face` is `True`, it first processes identity conditions (`id_cond`) and vision transformer hidden states (`id_vit_hidden`) through a `LocalFacialExtractor` to produce `valid_face_emb`. This `valid_face_emb` represents the extracted facial features.\n\nWithin the loop that iterates through the `transformer_blocks`, the `valid_face_emb` is used in a `PerceiverCrossAttention` module. The output of this cross-attention, scaled by `local_face_scale`, is then added to the `hidden_states` of the main transformer. This additive operation effectively integrates the facial features into the main hidden states, influencing the video generation process. The `PerceiverCrossAttention` modules are initialized in the `_init_face_inputs` method of `ConsisIDTransformer3DModel`.\n\n### IP-Adapter Attention Processors\n\nWhile the `ConsisIDTransformer3DModel` uses a specific `PerceiverCrossAttention` for face integration, other IP-Adapter variants, such as `FluxIPAdapterAttnProcessor`, integrate IP-Adapter hidden states directly within their attention mechanism. In `FluxIPAdapterAttnProcessor`, the `ip_hidden_states` are processed to generate `ip_key` and `ip_value`, which are then used in a `dispatch_attention_fn` with `ip_query` (derived from the main query). The resulting `current_ip_hidden_states` are scaled and added to `ip_attn_output`, which is then returned along with the main `hidden_states` and `encoder_hidden_states`. This indicates a more direct modification of the attention mechanism itself for IP-Adapter integration in models utilizing this processor.\n\n### IPAdapterFaceIDPlusImageProjection\n\nThe `IPAdapterFaceIDPlusImageProjection` class is responsible for projecting ID embeddings into a suitable format for the transformer. It takes `id_embeds` as input and processes them through several linear layers and attention blocks (`IPAdapterPlusImageProjectionBlock`). The output of this projection is then used as conditioning information. This module is distinct from the direct integration within the `ConsisIDTransformer3DModel` but provides the processed face embeddings that might be consumed by attention processors like `IPAdapterAttnProcessor`."
+  },
+  {
+    "index": 7,
+    "id": "1860a6a3-23f6-47f5-a9af-9e6143df17f1",
+    "repo": "prs/raw",
+    "commit": "5afbcce176cd4e8ec08f43ee9fae2d6562edf54c",
+    "pr": 12520,
+    "question": "How does the text-to-video pipeline handle dual text encoding from different language models before feeding the embeddings into the transformer?",
+    "ground_truth_answer": "In Kandinsky5T2VPipeline.encode_prompt (src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py), the pipeline processes prompts through both Qwen2.5-VL (text_encoder) and CLIP (text_encoder_2) to generate two separate embedding tensors: prompt_embeds_qwen with shape [batch, seq_len, qwen_hidden_dim] and prompt_embeds_clip with shape [batch, clip_hidden_dim]. These dual embeddings are then passed to the transformer backbone (Kandinsky5Transformer3DModel) which has separate in_text_dim and in_text_dim2 parameters configured to match the respective hidden dimensions of each text encoder, enabling cross-attention with both text representations.",
+    "facts": [
+      "Kandinsky5T2VPipeline.encode_prompt processes prompts through two text encoders: Qwen2.5-VL (text_encoder) and CLIP (text_encoder_2)",
+      "The encode_prompt method generates two separate embedding tensors: prompt_embeds_qwen with shape [batch, seq_len, qwen_hidden_dim] and prompt_embeds_clip with shape [batch, clip_hidden_dim]",
+      "Kandinsky5Transformer3DModel has separate in_text_dim and in_text_dim2 parameters configured to match the respective hidden dimensions of each text encoder",
+      "The dual embeddings are passed to Kandinsky5Transformer3DModel which enables cross-attention with both text representations"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "broad",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py",
+        "src/diffusers/models/transformers/transformer_kandinsky.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The text-to-video pipeline, specifically the `HunyuanVideoPipeline`, handles dual text encoding by utilizing two distinct text encoders: a `LlamaModel` and a `CLIPTextModel`. These encoders process the input prompt separately to generate two sets of embeddings, which are then combined before being fed into the transformer.\n\n### Text Encoding Process\n\nThe `HunyuanVideoPipeline` (and its variants like `HunyuanVideoFramepackPipeline` and `HunyuanVideoImageToVideoPipeline`) is initialized with two text encoders and their corresponding tokenizers:\n* `text_encoder`: A `LlamaModel` with its `LlamaTokenizerFast`.\n* `text_encoder_2`: A `CLIPTextModel` with its `CLIPTokenizer`.\n\nThe `encode_prompt` method within these pipelines is responsible for generating the dual text embeddings. For instance, in `pipeline_hunyuan_video_image2video.py`, the `encode_prompt` method orchestrates the encoding process.\n\n1. **Llama Embeddings**: The `_get_llama_prompt_embeds` method processes the input `prompt` using the `LlamaTokenizerFast` and `LlamaModel`. It tokenizes the prompt, handles padding and truncation, and then feeds the token IDs into the `text_encoder` to obtain hidden states. The relevant hidden state is extracted and returned as `prompt_embeds` along with an attention mask.\n\n2. **CLIP Embeddings**: Concurrently, the `_get_clip_prompt_embeds` method takes the `prompt` (or `prompt_2` if provided) and processes it using the `CLIPTokenizer` and `CLIPTextModel`. Similar to the Llama process, it tokenizes the input, handles truncation, and then uses `text_encoder_2` to get the pooled output, which serves as `pooled_prompt_embeds`.\n\n### Combining Embeddings\n\nAfter generating both sets of embeddings, the `encode_prompt` method returns `prompt_embeds`, `pooled_prompt_embeds`, and `prompt_attention_mask`. These are then passed to the transformer for multimodal information fusion. The specific concatenation or fusion mechanism within the transformer is not explicitly detailed in the provided snippets, but the pipeline ensures both sets of embeddings are available for the transformer's use."
+  },
+  {
+    "index": 8,
+    "id": "c21a83a7-8acb-42d9-9b67-0e57152569f8",
+    "repo": "prs/raw",
+    "commit": "dc6bd1511a4948ebca35b22609002bba58e71c83",
+    "pr": 12508,
+    "question": "How does the text encoding process differ between the T5 encoder forward pass and the transformer forward pass in terms of attention masking?",
+    "ground_truth_answer": "In the T5 encoder forward pass, the original tokenizer attention mask is used directly (tokenizer_mask_device). However, for the transformer forward pass, a modified attention mask is created that extends one position beyond the last valid token: it uses torch.arange to create indices, then sets attention_mask to (mask_indices <= seq_lengths.unsqueeze(1)), which includes the first padding token. This is implemented in _get_t5_prompt_embeds in both pipeline_chroma.py and pipeline_chroma_img2img.py.",
+    "facts": [
+      "In the T5 encoder forward pass, the original tokenizer attention mask (tokenizer_mask_device) is used directly",
+      "For the transformer forward pass, a modified attention mask is created that extends one position beyond the last valid token",
+      "The modified mask is created using torch.arange to generate indices, then setting attention_mask to (mask_indices <= seq_lengths.unsqueeze(1)), which includes the first padding token",
+      "This attention masking logic is implemented in the _get_t5_prompt_embeds method",
+      "_get_t5_prompt_embeds is present in both pipeline_chroma.py and pipeline_chroma_img2img.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/pipelines/chroma/pipeline_chroma.py",
+        "src/diffusers/pipelines/chroma/pipeline_chroma_img2img.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "completed",
+    "deepwiki_answer": "The text encoding process for T5 models and general transformers in terms of attention masking differs primarily in how the attention mask is generated and applied. For T5 encoders, as seen in `_get_t5_prompt_embeds` methods, there's often a specific modification to the attention mask to include padding tokens, while general transformers typically convert a boolean mask into an additive bias.\n\n### T5 Encoder Forward Pass Attention Masking\n\nIn pipelines utilizing a T5 encoder, such as `ChromaPipeline`, `ChromaImg2ImgPipeline`, `LTXPipeline`, and `MochiPipeline`, the attention mask is initially generated by the tokenizer. For example, in `src/diffusers/pipelines/chroma/pipeline_chroma.py`, the `T5TokenizerFast` creates `text_inputs` which include `input_ids` and `attention_mask`.\n\nA key difference for T5 in the Chroma pipeline is the explicit modification of this attention mask. The code calculates `seq_lengths` by summing the initial attention mask and then reconstructs the `attention_mask` to ensure it includes one padding token. This modified `attention_mask` is then passed to the `text_encoder`'s forward pass. A similar process is observed in `src/diffusers/pipelines/chroma/pipeline_chroma_img2img.py`.\n\nIn other T5-based pipelines like `LTXPipeline` and `MochiPipeline`, the `attention_mask` from the tokenizer is converted to a boolean tensor and passed directly to the `text_encoder`.\n\n### Transformer Forward Pass Attention Masking\n\nFor general transformer models, such as `Transformer2DModel`, `HunyuanDiT2DModel`, and `LTXVideoTransformer3DModel`, the attention masking typically involves converting a 2D boolean mask into an additive bias.\n\nIn `src/diffusers/models/transformers/transformer_2d.py`, if `attention_mask` or `encoder_attention_mask` is a 2D tensor, it is converted into a bias by replacing `1` (keep) with `0` and `0` (discard) with `-10000.0`, then expanding its dimensions. This bias is then added to the attention scores.\n\nSimilarly, in `src/diffusers/models/transformers/transformer_hunyuan_video.py`, a combined attention mask is created for both latent and condition sequences. This mask is then filled with `False` for padded tokens and later used in the transformer blocks.\n\nThe `ContextCLIPTextTransformer` in `src/diffusers/pipelines/blip_diffusion/modeling_ctx_clip.py` also builds a `causal_attention_mask` and expands the provided `attention_mask` to a 4D tensor for use in the `CLIPEncoder`.\n\n### Summary of Differences\n\nThe primary distinction lies in the specific handling of the attention mask:\n* **T5 Encoder (Chroma pipeline example)**: The attention mask is explicitly modified to include a padding token after being generated by the tokenizer.\n* **General Transformers**: A 2D attention mask (True/False or 1/0) is typically converted into an additive bias (0/-10000.0) and its dimensions are expanded to be compatible with attention score calculations. Some transformers also construct a combined attention mask for different input types."
+  },
+  {
+    "index": 9,
+    "id": "1292d085-5624-4326-847e-2ab5fce2def9",
+    "repo": "prs/raw",
+    "commit": "23ebbb4bc81a17ebea17cb7cb94f301199e49a7f",
+    "pr": 12478,
+    "question": "How does the model handle visual conditioning when preparing latent variables for video generation?",
+    "ground_truth_answer": "In the prepare_latents method of Kandinsky5T2VPipeline (src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py), when self.transformer.visual_cond is True, the method concatenates zeros and a mask to the latents tensor. Specifically, it creates visual_cond as zeros matching latent shape, creates visual_cond_mask as zeros with shape matching spatial dimensions but with 1 channel, then concatenates all three tensors along the channel dimension using torch.cat([latents, visual_cond, visual_cond_mask], dim=-1).",
+    "facts": [
+      "The prepare_latents method in Kandinsky5T2VPipeline checks if self.transformer.visual_cond is True to determine if visual conditioning should be applied",
+      "When visual conditioning is enabled, the method creates a visual_cond tensor filled with zeros that matches the latent tensor's shape",
+      "A visual_cond_mask tensor is created with zeros, matching the spatial dimensions of latents but with only 1 channel",
+      "The three tensors (latents, visual_cond, visual_cond_mask) are concatenated along the channel dimension using torch.cat([latents, visual_cond, visual_cond_mask], dim=-1)"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py",
+        "src/diffusers/models/transformers/transformer_kandinsky.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The model handles visual conditioning for video generation by encoding an input image or video into latent representations and then integrating these latents with the initial noise latents for the video generation process. Different pipelines employ varying strategies for this integration.\n\n### Visual Conditioning in `CogVideoXImageToVideoPipeline`\n\nIn the `CogVideoXImageToVideoPipeline`, the `prepare_latents` method is responsible for processing the input image into latent representations . The input `image` is first unsqueezed to add a frame dimension . The VAE (Variational Autoencoder) then encodes this image into `image_latents` . These `image_latents` are scaled and concatenated with zero-padded latents to match the desired number of frames for the video . Finally, these processed `image_latents` are returned along with the randomly generated initial `latents` for the video .\n\n### Visual Conditioning in `HunyuanVideoImageToVideoPipeline`\n\nThe `HunyuanVideoImageToVideoPipeline` also uses a `prepare_latents` method . Here, the input `image` is encoded by the VAE into `image_latents` . These `image_latents` are then repeated across the temporal dimension to match the `num_latent_frames` . The initial random `latents` are then combined with these `image_latents` using a linear interpolation, where the `image_latents` contribute based on a `t` parameter . The `image_condition_type` parameter, which can be \"latent_concat\" or \"token_replace\", influences how `num_channels_latents` is determined and how `image_latents` are handled  .\n\n### Visual Conditioning in `I2VGenXLPipeline`\n\nThe `I2VGenXLPipeline` utilizes a `prepare_image_latents` method . This method encodes the input `image` into `image_latents` using the VAE . A unique aspect here is the addition of a \"position mask\" for subsequent frames, which is concatenated with the initial image latent frame . These `image_latents` are then duplicated for each video per prompt and potentially for classifier-free guidance .\n\n### Visual Conditioning in `WanImageToVideoPipeline`\n\nIn the `WanImageToVideoPipeline`, the `prepare_latents` method handles the visual conditioning . The input `image` is unsqueezed to add a frame dimension . Depending on the `expand_timesteps` configuration or the presence of a `last_image`, a `video_condition` tensor is created by concatenating the input image with zero-filled frames . This `video_condition` is then encoded by the VAE to produce `latent_condition` . The `latent_condition` is normalized and then concatenated with a `mask_lat_size` to form the final conditioning input .\n\n### Visual Conditioning in `LTXConditionPipeline`\n\nThe `LTXConditionPipeline`'s `prepare_latents` method is more complex, allowing for multiple conditioning inputs (`conditions`) . For each condition, the input data (image or video) is encoded into `condition_latents` . These `condition_latents` are normalized and then linearly interpolated with the initial random `latents` based on a `strength` parameter and `frame_index` . If `num_data_frames` is greater than 1 and `frame_index` is not 0, additional processing involving noise and video IDs is performed . The pipeline also includes a static method `add_noise_to_image_conditioning_latents` which adds timestep-dependent noise to hard-conditioning latents to improve motion continuity .\n\n### Visual Conditioning in `Kandinsky5T2VPipeline`\n\nThe `Kandinsky5T2VPipeline`'s `prepare_latents` method primarily generates random noise latents . However, if `self.transformer.visual_cond` is true, it concatenates these latents with zero-filled `visual_cond` and `visual_cond_mask` tensors, indicating a mechanism for visual conditioning .\n\nNotes:\nThe provided code snippets demonstrate various approaches to visual conditioning across different video generation pipelines. Common themes include encoding the input image/video into latent space using a VAE and then integrating these visual latents with the initial noise latents for the video generation. The specific methods of integration vary, including concatenation, linear interpolation, and the addition of positional masks or noise.\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-model-handle-visu_eb7f9b6b-ffe9-49f6-9dd0-ad84c6ac78a1"
+  },
+  {
+    "index": 11,
+    "id": "a8089455-7a4a-4872-b9e1-abb3c3302abb",
+    "repo": "prs/raw",
+    "commit": "cefc2cf82dbdb5e4f725374420f0f6a91eb69048",
+    "pr": 12456,
+    "question": "How does the text encoder component integrate with the pipeline during prompt encoding, and what preprocessing happens to the prompt text before tokenization?",
+    "ground_truth_answer": "The text encoder is a T5GemmaEncoder (Google's T5Gemma-2B-2B-UL2 model's encoder component). During prompt encoding in PhotonPipeline, prompts first pass through TextPreprocessor.clean_text() which performs comprehensive cleaning including URL removal, special character handling, spam pattern removal, and text normalization using ftfy. The cleaned text is then tokenized using GemmaTokenizerFast (with max_length=256), and the resulting input_ids and attention_mask are passed to the T5GemmaEncoder to generate text embeddings of shape [batch, seq_len, 2304], which serve as encoder_hidden_states for the transformer.",
+    "facts": [
+      "The text encoder is a T5GemmaEncoder from Google's T5Gemma-2B-2B-UL2 model's encoder component",
+      "Prompts are preprocessed using TextPreprocessor.clean_text() which performs URL removal, special character handling, spam pattern removal, and text normalization using ftfy",
+      "The cleaned text is tokenized using GemmaTokenizerFast with max_length=256, producing input_ids and attention_mask",
+      "The T5GemmaEncoder generates text embeddings with shape [batch, seq_len, 2304]",
+      "These text embeddings serve as encoder_hidden_states for the transformer component in PhotonPipeline"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "broad",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/pipelines/photon/pipeline_photon.py",
+        "docs/source/en/api/pipelines/photon.md"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The text encoder component integrates into the pipeline during prompt encoding primarily through the `encode_prompt` method found in various pipeline implementations, such as `AllegroPipeline`  and `IFInpaintingPipeline` . Before tokenization, the prompt text undergoes a preprocessing step, typically involving cleaning the caption.  \n\n## Prompt Encoding Process\n\nThe prompt encoding process generally follows these steps:\n\n1.  **Text Preprocessing**: The input `prompt` is first processed by a `_text_preprocessing` method.  This step often involves cleaning the caption, as indicated by the `clean_caption` parameter.  For example, in `WanTextEncoderStep`, the `prompt_clean` function performs `basic_clean` and `whitespace_clean` to remove HTML entities and extra whitespace. \n\n2.  **Tokenization**: The preprocessed prompt is then tokenized using the pipeline's `tokenizer`.  This involves converting the text into numerical `input_ids` and generating an `attention_mask`.   Parameters like `padding=\"max_length\"`, `max_length`, `truncation=True`, and `add_special_tokens=True` are commonly used during tokenization. \n\n3.  **Truncation Handling**: The tokenization process includes truncation, and a warning is logged if any part of the input text is truncated due to exceeding the `max_length` supported by the text encoder. \n\n4.  **Text Encoder Forward Pass**: The `text_input_ids` and `attention_mask` are then passed to the `text_encoder` component.  The `text_encoder` processes these inputs to produce `prompt_embeds`, which are the numerical representations of the prompt. \n\n### Example from `AllegroPipeline`\n\nIn the `AllegroPipeline`, the `encode_prompt` method demonstrates this flow:\n```python\n            prompt = self._text_preprocessing(prompt, clean_caption=clean_caption)\n            text_inputs = self.tokenizer(\n                prompt,\n                padding=\"max_length\",\n                max_length=max_length,\n                truncation=True,\n                add_special_tokens=True,\n                return_tensors=\"pt\",\n            )\n            text_input_ids = text_inputs.input_ids\n            # ... truncation warning logic ...\n            prompt_attention_mask = text_inputs.attention_mask\n            prompt_attention_mask = prompt_attention_mask.to(device)\n\n            prompt_embeds = self.text_encoder(text_input_ids.to(device), attention_mask=prompt_attention_mask)\n            prompt_embeds = prompt_embeds[0]\n```\n\n\nThis sequence ensures that the prompt text is properly prepared and converted into a format suitable for the diffusion model. \n\n## Preprocessing Details\n\nThe `_text_preprocessing` function is responsible for cleaning the prompt.  While the exact implementation of `_text_preprocessing` is not provided in the snippets, the `WanTextEncoderStep` in `src/diffusers/modular_pipelines/wan/encoders.py` provides an example of prompt cleaning functions:\n*   `basic_clean(text)`: Fixes text encoding issues using `ftfy.fix_text` and unescapes HTML entities. \n*   `whitespace_clean(text)`: Replaces multiple whitespace characters with a single space and strips leading/trailing whitespace. \n*   `prompt_clean(text)`: Combines `whitespace_clean` and `basic_clean`. \n\nThese cleaning steps are crucial for standardizing the input text before it is tokenized and fed into the text encoder. \n\n## Integration with Text Encoder\n\nThe `text_encoder` component, such as `UMT5EncoderModel` in `WanTextEncoderStep`  or `GLMModel` in `CogView4ControlPipeline` , receives the tokenized `input_ids` and `attention_mask` to generate `prompt_embeds`.  These embeddings are then used by the subsequent stages of the diffusion pipeline. \n\nIn some pipelines, like `StableDiffusionXLPipeline`, multiple text encoders and tokenizers might be used.  In such cases, the embeddings from each text encoder are concatenated. \n\n## Diagram of the Process\n\n```mermaid\ngraph TD\n    A[Prompt Text] --> B{_text_preprocessing};\n    B --> C[Cleaned Prompt Text];\n    C --> D{Tokenizer};\n    D -- input_ids, attention_mask --> E[Text Encoder];\n    E -- prompt_embeds --> F[Diffusion Pipeline];\n```\n\nNotes:\nThe provided snippets consistently show a pattern where the `encode_prompt` method within various diffusion pipelines handles the text encoding.    The `_text_preprocessing` function is a common step before tokenization, indicating a standardized approach to prompt preparation across these pipelines.   The specific implementation of `_text_preprocessing` is not detailed in all snippets, but `src/diffusers/modular_pipelines/wan/encoders.py` provides concrete examples of cleaning functions. \n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-text-encoder-comp_f02b1c01-a72a-4cb7-bcf1-b4903c336a79"
+  },
+  {
+    "index": 12,
+    "id": "57c8befe-df10-4a3b-82ae-149a7cc6d166",
+    "repo": "prs/raw",
+    "commit": "693d8a3a52252153dc0f1503ea87db89d2364693",
+    "pr": 12454,
+    "question": "How does the RoPE input preparation differ between the standard model and its Kontext variant when an input image is provided?",
+    "ground_truth_answer": "In FluxKontextRoPEInputsStep (src/diffusers/modular_pipelines/flux/before_denoise.py), when image_height and image_width are present, it creates separate img_ids for the input image by calling _prepare_latent_image_ids with the image dimensions and setting the first dimension to 1 instead of 0. These img_ids are then concatenated with the standard latent_ids to form the final img_ids tensor. The standard FluxRoPEInputsStep doesn't have this logic\u2014it only creates img_ids for the generation latents without handling separate input image dimensions.",
+    "facts": [
+      "FluxKontextRoPEInputsStep in src/diffusers/modular_pipelines/flux/before_denoise.py creates separate img_ids for the input image when image_height and image_width are present",
+      "The separate img_ids are created by calling _prepare_latent_image_ids with the image dimensions and setting the first dimension to 1 instead of 0",
+      "The img_ids for the input image are concatenated with the standard latent_ids to form the final img_ids tensor",
+      "FluxRoPEInputsStep only creates img_ids for the generation latents without handling separate input image dimensions"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/modular_pipelines/flux/before_denoise.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The RoPE (Rotary Positional Embedding) input preparation differs between the standard Flux model and its Flux Kontext variant primarily in how `img_ids` are generated when an input image is provided. The Flux Kontext variant specifically handles an input image by concatenating image-specific `img_ids` with the latent `img_ids` . In contrast, the standard Flux model only prepares `img_ids` based on the target height and width for the denoising process .\n\n## RoPE Input Preparation in Standard Flux Model\n\nIn the standard Flux model, the `FluxRoPEInputsStep` class is responsible for preparing the RoPE inputs . This step is part of the `FluxBeforeDenoiseBlocks` for text-to-image generation and `FluxImg2ImgBeforeDenoiseBlocks` for image-to-image generation  .\n\nWhen an input image is provided (implicitly handled by the `img2img` pipeline), the `__call__` method of `FluxRoPEInputsStep` calculates `txt_ids` from `prompt_embeds`  and `img_ids` based on the `height` and `width` of the target latent space . The `img_ids` are generated using `FluxPipeline._prepare_latent_image_ids` . These `txt_ids` and `img_ids` are then passed to the denoiser .\n\n## RoPE Input Preparation in Flux Kontext Variant\n\nFor the Flux Kontext variant, the `FluxKontextRoPEInputsStep` class handles RoPE input preparation . This step is included in `FluxKontextBeforeDenoiseBlocks` .\n\nThe `__call__` method in `FluxKontextRoPEInputsStep` also calculates `txt_ids` similarly to the standard model . However, when `image_height` and `image_width` are provided (indicating an input image), it calculates a separate set of `img_ids` for the input image's latent space . These image-specific `img_ids` have their first dimension set to 1 .\n\nAdditionally, it calculates `latent_ids` based on the target `height` and `width` . If image-specific `img_ids` were generated, they are concatenated with the `latent_ids` . This combined tensor is then assigned to `block_state.img_ids` . This concatenated `img_ids` tensor is then used by the `FluxKontextLoopDenoiser` .\n\n## Summary of Differences\n\nThe key difference lies in how `img_ids` are constructed:\n*   **Standard Flux Model**: `img_ids` are solely derived from the target `height` and `width` of the denoising process .\n*   **Flux Kontext Variant**: When an input image is present, it generates `img_ids` for both the input image's latent space and the target latent space, and then concatenates them . This allows the model to incorporate positional information from the original input image alongside the generated latents.\n\nBoth models use `torch.zeros` to initialize `txt_ids` based on the `prompt_embeds` shape  .\n\n## Usage in Denoising\n\nBoth `FluxLoopDenoiser` (standard) and `FluxKontextLoopDenoiser` (Kontext) receive `txt_ids` and `img_ids` as inputs for their respective `transformer` calls  . The `FluxKontextLoopDenoiser` also concatenates `image_latents` with `latents` before passing them to the transformer, further highlighting its handling of input images .\n\nNotes:\nThe `QwenEmbedRope` class and related `QwenImageRoPEInputsStep` are for a different model (`qwenimage`) and are not directly related to the Flux and Flux Kontext models discussed in the prompt  . Similarly, `Kandinsky5Transformer3DModel` and `CogView4TrainingAttnProcessor` are for other transformer models and are not relevant to the Flux RoPE input preparation  .\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-rope-input-prepar_deca7b35-9afd-47c8-bb2a-f5ed623a714f"
+  },
+  {
+    "index": 13,
+    "id": "5b8efe9b-f76c-4d23-839a-040e564bd71d",
+    "repo": "prs/raw",
+    "commit": "2dc31677e12fe175950f28fd5a0c0703594e7ce4",
+    "pr": 12445,
+    "question": "How does the pipeline compute the positional embeddings needed for rotary position encoding (RoPE) in the transformer?",
+    "ground_truth_answer": "In FluxRoPEInputsStep.__call__ (src/diffusers/modular_pipelines/flux/inputs.py), the step creates txt_ids as a zero tensor with shape (prompt_embeds.shape[1], 3) for text sequences. For images, it calls FluxPipeline._prepare_latent_image_ids() with the latent height/width (divided by 2) to generate img_ids containing spatial position information. Both are converted to the appropriate device and dtype before being passed to the denoiser.",
+    "facts": [
+      "FluxRoPEInputsStep.__call__ creates txt_ids as a zero tensor with shape (prompt_embeds.shape[1], 3) for text sequences",
+      "FluxPipeline._prepare_latent_image_ids() is called with latent height/width divided by 2 to generate img_ids containing spatial position information",
+      "Both txt_ids and img_ids are converted to the appropriate device and dtype before being passed to the denoiser"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/modular_pipelines/flux/inputs.py",
+        "src/diffusers/modular_pipelines/flux/denoise.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The pipeline computes positional embeddings for Rotary Position Encoding (RoPE) by first generating 1D frequency tensors for each spatial (height, width) and temporal dimension, and then combining these into a multi-dimensional frequency tensor. This process is handled by various specialized modules depending on the specific transformer model being used. The core logic for generating 1D rotary positional embeddings resides in the `get_1d_rotary_pos_embed` function .\n\n### Core Positional Embedding Computation\n\nThe fundamental step in computing RoPE involves the `get_1d_rotary_pos_embed` function . This function takes the embedding dimension (`dim`), position indices (`pos`), and a scaling factor (`theta`) to generate the frequency tensor.\nInside `get_1d_rotary_pos_embed`, the frequencies are calculated based on the formula `1.0 / (theta ** (torch.arange(0, dim, 2, ...) / dim))` . These frequencies are then combined with the position indices using an outer product . Depending on the `use_real` and `repeat_interleave_real` flags, the function returns either the cosine and sine components separately or complex numbers .\n\n### Multi-dimensional Positional Embeddings\n\nDifferent transformer models extend this 1D embedding generation to 2D or 3D as needed:\n\n#### 3D Rotary Positional Embeddings (for video models)\n\nFor video-based models like CogVideoX, the `get_3d_rotary_pos_embed` function is used . This function first determines the dimensions for temporal, height, and width components . It then calls `get_1d_rotary_pos_embed` for each of these dimensions to get their respective frequency tensors . Finally, these temporal and spatial frequencies are broadcast and concatenated to form a 3D positional embedding .\n\nThe `_prepare_rotary_positional_embeddings` method in `CogVideoXPipeline`  is responsible for calling `get_3d_rotary_pos_embed`. It calculates `grid_height`, `grid_width`, and `temporal_size` (num_frames) based on the input video dimensions and transformer configuration . The resulting `freqs_cos` and `freqs_sin` are then returned . These embeddings are subsequently passed to the transformer blocks during the forward pass .\n\n#### 2D Rotary Positional Embeddings (for image models)\n\nFor image-based models, `get_2d_rotary_pos_embed_from_grid`  is used. This function divides the embedding dimension into two halves and calls `get_1d_rotary_pos_embed` for the height and width dimensions separately . The resulting embeddings are then concatenated .\n\nAn example of its usage can be seen in `pipeline_hunyuandit_controlnet.py`, where `get_2d_rotary_pos_embed` (which internally uses `get_2d_rotary_pos_embed_from_grid`) is called to generate `image_rotary_emb` .\n\n#### Specialized Implementations\n\nSeveral transformer models have their own specialized modules for computing rotary positional embeddings:\n\n*   **HunyuanVideoRotaryPosEmbed**: This module in `HunyuanVideoTransformerBlock`  creates a 3D grid based on `num_frames`, `height`, and `width` . It then applies `get_1d_rotary_pos_embed` for each axis and concatenates the results . The `HunyuanVideoTransformerBlock` then receives these `freqs_cis` as `image_rotary_emb` .\n*   **LTXVideoRotaryPosEmbed**: This module in `transformer_ltx.py`  prepares video coordinates and computes frequencies using a logarithmic scale . It then generates cosine and sine components by repeating and concatenating the frequencies . The `LTXVideoTransformer3DModel` calls this module to get `image_rotary_emb` .\n*   **CogView4RotaryPosEmbed**: This module in `transformer_cogview4.py`  calculates inverse frequencies for height and width, then uses `torch.outer` to create `freqs_h` and `freqs_w` . It then scales these frequencies based on `rope_axes_dim` and concatenates them to form the final `freqs` . The `CogView4TrainingAttnProcessor` then applies these embeddings to the query and key tensors .\n*   **Lumina2RotaryPosEmbed**: This module in `transformer_lumina2.py`  precomputes 1D frequency tensors for different axes using `get_1d_rotary_pos_embed` . It then generates position IDs for both captions and images and uses these IDs to gather the appropriate frequencies .\n*   **QwenEmbedRope**: This module in `transformer_qwenimage.py`  precomputes positive and negative frequency tensors using `rope_params` . The `_compute_video_freqs` method then combines these precomputed frequencies for frame, height, and width dimensions .\n*   **WanRotaryPosEmbed** and **SkyReelsV2RotaryPosEmbed**: These modules  both precompute `freqs_cos` and `freqs_sin` by calling `get_1d_rotary_pos_embed` for temporal, height, and width dimensions . In their `forward` methods, they split these precomputed frequencies and expand them to match the input `hidden_states` shape .\n*   **MochiRoPE**: This module  calculates positions based on `num_frames`, `height`, and `width`  and then uses these positions to create cosine and sine components of the rotary embeddings .\n*   **CosmosRotaryPosEmbed**: This module  calculates separate `theta` values for height, width, and temporal dimensions using NTK-aware scaling . It then computes spatial and temporal frequencies and combines them .\n*   **PRXEmbedND**: This module  uses a `rope` helper function to compute rotary embeddings for each axis independently and then concatenates them . The `PRXTransformer2DModel` uses this module to generate `pe` (positional embeddings) .\n*   **BriaEmbedND**: This module  iterates through each axis dimension, calls `get_1d_rotary_pos_embed` to get cosine and sine components, and then concatenates them .\n\n### Applying Rotary Embeddings\n\nOnce the positional embeddings (typically `freqs_cos` and `freqs_sin`) are computed, they are applied to the query and key tensors within the attention mechanism. The `apply_rotary_emb` function  performs this operation. It takes the input tensor `x` (query or key) and the precomputed frequencies `freqs_cis` . It reshapes `x` to separate real and imaginary parts, rotates them using the cosine and sine frequencies, and then combines them back .\n\nNotes:\nThe provided context primarily focuses on the computation and application of Rotary Positional Embeddings (RoPE) in various transformer models within the `diffusers` library. The `Models` wiki page provides a high-level overview of transformer models but does not delve into the specifics of RoPE computation.\n\nWiki pages you might want to explore:\n- [Models (huggingface/diffusers)](/wiki/huggingface/diffusers#2.3)\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-pipeline-compute_dbbc671e-bc65-4240-9d0c-b34eacae6f34"
+  },
+  {
+    "index": 14,
+    "id": "b087340a-4356-416c-b05e-c0b6e39855d1",
+    "repo": "prs/raw",
+    "commit": "c3675d4c9bb9c02521cd2c1aec198460c1657256",
+    "pr": 12416,
+    "question": "How does the image preprocessing strategy differ between the standard edit variant and the plus variant when preparing images for the VAE encoder?",
+    "ground_truth_answer": "In QwenImageEditProcessImagesInputStep (src/diffusers/modular_pipelines/qwenimage/encoders.py), the same resized_image is used for both VL encoding and VAE preprocessing. However, QwenImageEditPlusProcessImagesInputStep uses a separate vae_image input (created by QwenImageEditPlusResizeDynamicStep) instead of resized_image, allowing different image sizes for the vision-language encoder (384\u00d7384 condition image) versus the VAE encoder (1024\u00d71024).",
+    "facts": [
+      "QwenImageEditProcessImagesInputStep uses the same resized_image for both VL encoding and VAE preprocessing",
+      "QwenImageEditPlusProcessImagesInputStep uses a separate vae_image input instead of resized_image for VAE preprocessing",
+      "The vae_image input is created by QwenImageEditPlusResizeDynamicStep",
+      "The plus variant allows different image sizes: 384\u00d7384 for the vision-language encoder and 1024\u00d71024 for the VAE encoder"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/modular_pipelines/qwenimage/encoders.py",
+        "src/diffusers/modular_pipelines/qwenimage/modular_blocks.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 15,
+    "id": "84f6710e-afb3-4e84-bc19-add4f15622d0",
+    "repo": "prs/raw",
+    "commit": "ec5449f3a1378df207df481bfa1ad7ff8057a58a",
+    "pr": 12389,
+    "question": "What HTTP client libraries are now supported for handling connection errors when downloading model files, and which specific exceptions are caught for each?",
+    "ground_truth_answer": "Both requests and httpx are now supported. In pipeline_loading_utils.py and pipeline_utils.py, the code catches requests.ConnectionError for the requests library and httpx.NetworkError for the httpx library, along with HfHubHTTPError (which replaced HTTPError) when attempting to connect to the Hub for model downloads.",
+    "facts": [
+      "Both requests and httpx HTTP client libraries are now supported for handling connection errors during model downloads",
+      "In pipeline_loading_utils.py and pipeline_utils.py, requests.ConnectionError is caught for the requests library",
+      "In pipeline_loading_utils.py and pipeline_utils.py, httpx.NetworkError is caught for the httpx library",
+      "HfHubHTTPError (which replaced HTTPError) is also caught when attempting to connect to the Hub for model downloads"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/pipelines/pipeline_loading_utils.py",
+        "src/diffusers/pipelines/pipeline_utils.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The image preprocessing strategy for the VAE encoder differs between the standard edit variant and the plus variant primarily in how the input image is handled before being passed to the VAE. The \"plus\" variant, specifically `QwenImageEditPlusProcessImagesInputStep` , uses a dedicated `vae_image` input, which is distinct from the `resized_image` used for other processing steps. In contrast, the standard `QwenImageProcessImagesInputStep`  (used by the standard edit variant) uses the `resized_image` for VAE preprocessing.\n\n## Image Resizing and Input Handling\n\n### Standard Edit Variant\nFor the standard edit variant, the `QwenImageProcessImagesInputStep`  is responsible for preparing images for the VAE encoder. This step primarily uses the `resized_image` input . If `resized_image` is not available, it falls back to the original `image` input . The `preprocess` method of `components.image_processor` is then called with this image, along with `height` and `width` .\n\n### Plus Variant\nThe \"plus\" variant utilizes `QwenImageEditPlusProcessImagesInputStep` . This step explicitly takes a `vae_image` as input . The `QwenImageEditPlusResizeDynamicStep`  is used to generate both `condition_images` (for the VL encoder) and `vae_images` (for the VAE encoder) . The `vae_images` are simply the original input images without any resizing for the VAE path . This `vae_image` is then passed to the `preprocess` method of `components.image_processor` .\n\n## VAE Encoder Integration\nBoth variants ultimately use `QwenImageVaeEncoderDynamicStep`  to convert the preprocessed images into latent representations. This step takes a `processed_image` as input  and calls `encode_vae_image`  to perform the VAE encoding. The key difference lies in how this `processed_image` is generated:\n*   **Standard Edit**: The `processed_image` comes from the `resized_image` (or original `image`) after processing by `QwenImageProcessImagesInputStep` .\n*   **Plus Variant**: The `processed_image` comes from the dedicated `vae_image` output of `QwenImageEditPlusResizeDynamicStep` , which is then handled by `QwenImageEditPlusProcessImagesInputStep` .\n\nThis distinction is explicitly mentioned in the description of `QwenImageEditPlusProcessImagesInputStep`: \"Unlike QwenImage Edit, QwenImage Edit Plus doesn't use the same resized image for further preprocessing.\" .\n\n## Diagram of the Preprocessing Flow\n\n```mermaid\ngraph TD\n    A[\"Input Image(s)\"] --> B{{\"QwenImageEditPlusResizeDynamicStep\"}};\n    B --> C[\"condition_images (for VL)\"];\n    B --> D[\"vae_images (for VAE)\"];\n    D --> E{{\"QwenImageEditPlusProcessImagesInputStep\"}};\n    E --> F[\"processed_image\"];\n    F --> G{{\"QwenImageVaeEncoderDynamicStep\"}};\n    G --> H[\"image_latents\"];\n\n    A_std[\"Input Image(s)\"] --> B_std{{\"QwenImageEditResizeDynamicStep\"}};\n    B_std --> D_std[\"resized_image\"];\n    D_std --> E_std{{\"QwenImageProcessImagesInputStep\"}};\n    E_std --> F_std[\"processed_image\"];\n    F_std --> G_std{{\"QwenImageVaeEncoderDynamicStep\"}};\n    G_std --> H_std[\"image_latents\"];\n\n    subgraph \"QwenImage Edit Plus\"\n        A --> B;\n        B --> C;\n        B --> D;\n        D --> E;\n        E --> F;\n        F --> G;\n        G --> H;\n    end\n\n    subgraph \"Standard QwenImage Edit\"\n        A_std --> B_std;\n        B_std --> D_std;\n        D_std --> E_std;\n        E_std --> F_std;\n        F_std --> G_std;\n        G_std --> H_std;\n    end\n```\n\nNotes:\nThe `QwenImageEditPlusVaeEncoderBlocks`  explicitly lists the sequence of steps for the VAE encoder in the \"plus\" variant, which includes `QwenImageEditPlusResizeDynamicStep`  and `QwenImageEditPlusProcessImagesInputStep` . The standard edit variant uses `QwenImageEditAutoVaeEncoderStep` , which can resolve to `QwenImageEditVaeEncoderStep` or `QwenImageEditInpaintVaeEncoderStep`, both of which would use `QwenImageProcessImagesInputStep` for preprocessing. \n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-image-preprocessi_d65a85d7-e88d-40b1-b522-c318ecaa9e01"
+  },
+  {
+    "index": 16,
+    "id": "321e7a9d-147b-4d2a-a5e0-d09f1776e158",
+    "repo": "prs/raw",
+    "commit": "8c72cd12ee65e420c86a0724f0182f966f339a7e",
+    "pr": 12340,
+    "question": "How does the denoising loop handle condition video frames during the diffusion process?",
+    "ground_truth_answer": "In LucyEditPipeline.__call__ (src/diffusers/pipelines/lucy/pipeline_lucy_edit.py), the condition video is first encoded via self.vae.encode (using argmax mode) to produce condition_latents, which are normalized using latents_mean and latents_std. During each denoising step, these condition_latents are concatenated channel-wise with the noise latents via torch.cat([latents, condition_latents], dim=1) before being passed to the transformer model, allowing the model to use the condition video as guidance throughout the diffusion process.",
+    "facts": [
+      "In LucyEditPipeline.__call__, the condition video is encoded using self.vae.encode with argmax mode to produce condition_latents",
+      "The condition_latents are normalized using latents_mean and latents_std",
+      "During each denoising step, condition_latents are concatenated channel-wise with noise latents via torch.cat([latents, condition_latents], dim=1)",
+      "The concatenated tensor is passed to the transformer model to use the condition video as guidance throughout the diffusion process"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/pipelines/lucy/pipeline_lucy_edit.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The codebase primarily uses the `huggingface_hub` library for downloading model files, which supports handling connection errors from various HTTP client libraries  . Specifically, it catches exceptions from `httpx` and `requests` for network-related issues  .\n\n## Supported HTTP Client Libraries and Exceptions\n\nThe `huggingface/diffusers` codebase, when downloading model files via `hf_hub_download` or `model_info` functions from the `huggingface_hub` library, handles connection errors from the following HTTP client libraries:\n\n*   **`requests`**: Catches `requests.ConnectionError`  .\n*   **`httpx`**: Catches `httpx.NetworkError`  .\n\nIn addition to these, the `huggingface_hub` library's own `HfHubHTTPError` and `OfflineModeIsEnabled` exceptions are also caught to manage various download and connection issues  .\n\n### Exception Handling in `load_config`\n\nThe `ConfigMixin.load_config` method, used for loading configuration files, includes a `try-except` block that specifically handles various exceptions that can occur during the download process using `hf_hub_download` . These include:\n\n*   `RepositoryNotFoundError`: Raised if the model repository is not found .\n*   `RevisionNotFoundError`: Raised if the specified git revision (branch, tag, or commit ID) does not exist .\n*   `EntryNotFoundError`: Raised if the expected file (e.g., `config.json`) is not found within the repository .\n*   `HfHubHTTPError`: Catches specific HTTP connection errors from the Hugging Face Hub .\n*   `ValueError`: A general error for connection issues, suggesting checking internet connection or using offline mode .\n*   `EnvironmentError`: A general error for other loading failures, such as issues with local directories or incorrect paths .\n\n### Exception Handling in `_get_model_file`\n\nThe `_get_model_file` function, which is responsible for retrieving model weight files, also implements similar error handling for `hf_hub_download` . It catches:\n\n*   `RepositoryNotFoundError` \n*   `RevisionNotFoundError` \n*   `EntryNotFoundError` \n*   `HfHubHTTPError` \n*   `ValueError` \n*   `EnvironmentError` \n\n### Exception Handling in `_download_dduf_file`\n\nThe `_download_dduf_file` function, used for downloading DDUF (Distributed Data Unification Format) files, specifically handles network errors when calling `model_info` . It catches:\n\n*   `HfHubHTTPError` \n*   `OfflineModeIsEnabled` \n*   `requests.ConnectionError` \n*   `httpx.NetworkError` \n\nIf `model_info` fails, it attempts to load from the local cache by setting `local_files_only = True` . If the file is not found locally, it re-raises the original error .\n\n## Usage in `DiffusionPipeline.download`\n\nThe `DiffusionPipeline.download` class method also utilizes `model_info` and `snapshot_download` from `huggingface_hub`  . It catches `HfHubHTTPError`, `OfflineModeIsEnabled`, `requests.ConnectionError`, and `httpx.NetworkError` when attempting to get model information . If these errors occur, it sets `local_files_only = True` and proceeds to try loading from the local cache . If the file is not found locally, it re-raises the initial error .\n\n## Notes\n\nThe `tests/pipelines/test_pipelines.py` file contains a test case `test_cached_files_are_used_when_no_internet` that demonstrates this error handling by mocking `requests.request` to raise an `HfHubHTTPError` . This test confirms that the system attempts to load from the local cache when network errors occur .\n\nWiki pages you might want to explore:\n- [Configuration System (huggingface/diffusers)](/wiki/huggingface/diffusers#2.5)\n\nView this search on DeepWiki: https://deepwiki.com/search/what-http-client-libraries-are_2aaffefc-b52c-49cd-b7a4-721048cfe44a"
+  },
+  {
+    "index": 17,
+    "id": "027ba50a-bcca-43b9-b30a-85e88aa9a151",
+    "repo": "prs/raw",
+    "commit": "eda9ff8300eb3b8ceec15ef69d74e35abd3d39b3",
+    "pr": 12328,
+    "question": "How does the system prevent race conditions when multiple concurrent requests need to configure schedulers with different timestep settings?",
+    "ground_truth_answer": "The system uses `async_retrieve_timesteps` with `return_scheduler=True` to obtain a scheduler copy already configured with timesteps, avoiding mutation of the shared scheduler. In `RequestScopedPipeline.generate` (examples/server-async/utils/requestscopedpipeline.py), it first calls `_make_local_scheduler` which attempts `clone_for_request` on the BaseAsyncScheduler-wrapped scheduler, falling back to `deepcopy` if needed. Then `async_retrieve_timesteps` (examples/server-async/utils/scheduler.py) calls `set_timesteps` only on this cloned scheduler instance and returns the configured scheduler along with timesteps, ensuring the original shared scheduler remains untouched.",
+    "facts": [
+      "The system calls async_retrieve_timesteps with return_scheduler=True to obtain a scheduler copy that is already configured with timesteps",
+      "RequestScopedPipeline.generate calls _make_local_scheduler which attempts clone_for_request on the BaseAsyncScheduler-wrapped scheduler, falling back to deepcopy if needed",
+      "async_retrieve_timesteps calls set_timesteps only on the cloned scheduler instance and returns both the configured scheduler and timesteps",
+      "The original shared scheduler remains untouched because all mutations happen on cloned instances",
+      "This cloning mechanism prevents race conditions by ensuring each concurrent request operates on its own scheduler copy"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "examples/server-async/utils/requestscopedpipeline.py",
+        "examples/server-async/utils/scheduler.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The denoising loop handles condition video frames by incorporating them into the model input, primarily through concatenation with the latent representation or by using them directly as ControlNet conditioning. The specific method depends on the pipeline being used.\n\n### `AnimateDiffVideoToVideoControlNetPipeline`\nIn the `AnimateDiffVideoToVideoControlNetPipeline`, condition video frames are passed as `conditioning_frames` to the `controlnet` model within the denoising loop . The `controlnet` then outputs `down_block_res_samples` and `mid_block_res_sample` , which are subsequently used as additional residuals for the `unet` during noise prediction . The `conditioning_frames` are prepared before the denoising loop begins .\n\n### `LTXConditionPipeline`\nFor the `LTXConditionPipeline`, condition video frames are processed in the `prepare_latents` method . If `conditions` are provided, they are encoded by the VAE to `condition_latents` . These `condition_latents` can either directly modify the initial `latents` through linear interpolation  or be stored as `extra_conditioning_latents` along with their corresponding masks and video IDs . During the denoising loop, if `is_conditioning_image_or_video` is true, a `conditioning_mask_model_input` is created . The `timestep` for the transformer is then adjusted using this mask . After noise prediction and guidance, the `latents` are updated, and if `is_conditioning_image_or_video` is true, a `tokens_to_denoise_mask` is applied to selectively update parts of the latents .\n\n### `WanImageToVideoPipeline` and `SkyReelsV2ImageToVideoPipeline`\nIn both `WanImageToVideoPipeline` and `SkyReelsV2ImageToVideoPipeline`, the `prepare_latents` method generates `latents` and `condition` . Within the denoising loop, `latent_model_input` is formed by concatenating `latents` and `condition` along the channel dimension . This combined input is then passed to the `transformer` for noise prediction .\n\n### `HunyuanVideoImageToVideoPipeline`\nThe `HunyuanVideoImageToVideoPipeline` handles image conditions in two ways, determined by `image_condition_type` . If `image_condition_type` is `\"latent_concat\"`, `image_latents` and a `mask` are concatenated with the `latents` to form `latent_model_input` . If it's `\"token_replace\"`, `image_latents` replace the first token of the `latents` . The `transformer` then uses this `latent_model_input` for noise prediction .\n\n### `StableVideoDiffusionPipeline`\nIn the `StableVideoDiffusionPipeline`, `image_latents` are concatenated with `latent_model_input` along the channel dimension before being passed to the `unet` for noise prediction .\n\nNotes:\nThe provided snippets illustrate various approaches to integrating conditioning information into the denoising process across different video diffusion pipelines. While the specific mechanisms differ (e.g., ControlNet, latent concatenation, token replacement), the common theme is that conditioning frames influence the noise prediction model's input to guide the generation.\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-denoising-loop-ha_b28df341-b067-4318-808f-1cde52bd63c3"
+  },
+  {
+    "index": 18,
+    "id": "d0b9a1f5-cea6-4db2-a3f2-2a8df2edb2bc",
+    "repo": "prs/raw",
+    "commit": "4e36bb0d23a0450079560ac12d2858e2eb3f7e24",
+    "pr": 12301,
+    "question": "How does the pipeline combine masked image information with control conditioning for the inpainting controlnet?",
+    "ground_truth_answer": "In QwenImageControlNetInpaintPipeline.prepare_image_with_mask (src/diffusers/pipelines/qwenimage/pipeline_qwenimage_controlnet_inpaint.py), the pipeline first creates a masked_image by cloning the input image and setting masked regions (where mask > 0.5) to -1. This masked image is then encoded through the VAE to get image_latents. The mask is downsampled to match the latent dimensions and inverted (1 - mask). Finally, image_latents and the inverted mask are concatenated along the channel dimension to form the control_image, which is then packed and passed to the controlnet.",
+    "facts": [
+      "QwenImageControlNetInpaintPipeline.prepare_image_with_mask creates a masked_image by cloning the input image and setting masked regions (where mask > 0.5) to -1",
+      "The masked image is encoded through the VAE to produce image_latents",
+      "The mask is downsampled to match latent dimensions and inverted (1 - mask)",
+      "image_latents and the inverted mask are concatenated along the channel dimension to form the control_image",
+      "The control_image is packed and passed to the controlnet"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_controlnet_inpaint.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The system prevents race conditions by ensuring that each scheduler instance is configured independently for each request. The `retrieve_timesteps` function, which is widely used across various pipelines, takes a `scheduler` object as an argument and calls its `set_timesteps` method directly. This means that the timestep settings are applied to a specific scheduler instance rather than a shared global state.    \n\n## Scheduler Configuration\n\nThe core mechanism for setting timesteps is the `set_timesteps` method available in various scheduler implementations. For example, the `UnCLIPScheduler`  and `SASolverScheduler`  both have their own `set_timesteps` methods. These methods modify the internal state of the specific scheduler instance they are called on.\n\n### `retrieve_timesteps` Function\n\nThe `retrieve_timesteps` function is a common utility function found in multiple pipeline files, such as `src/diffusers/pipelines/pag/pipeline_pag_sd.py` , `src/diffusers/modular_pipelines/qwenimage/before_denoise.py` , and `src/diffusers/modular_pipelines/wan/before_denoise.py` . This function takes a `scheduler` object as an argument, along with `num_inference_steps`, `device`, `timesteps`, and `sigmas`. \n\nInside `retrieve_timesteps`, the `scheduler.set_timesteps()` method is called.    This direct call on the provided `scheduler` instance ensures that any modifications to timestep settings are localized to that specific instance.\n\n### Scheduler Instances\n\nEach request that needs to configure a scheduler would typically instantiate its own scheduler object. For example, the `UnCLIPScheduler`  initializes its `betas`, `alphas`, `alphas_cumprod`, and `timesteps` as instance attributes in its `__init__` method.  When `set_timesteps` is called on an `UnCLIPScheduler` instance, it updates the `self.num_inference_steps` and `self.timesteps` attributes of that specific instance. \n\nSimilarly, the `SASolverScheduler`  and `EulerDiscreteScheduler`  also manage their timestep-related attributes as instance variables.  \n\nBy operating on instance-specific data, the system avoids shared mutable state that could lead to race conditions when multiple concurrent requests attempt to configure schedulers with different settings.\n\n## Example Flow\n\n1.  A request comes in, requiring a scheduler with specific timestep settings.\n2.  A new scheduler object is instantiated (e.g., `scheduler = UnCLIPScheduler(...)`). \n3.  The `retrieve_timesteps` function is called, passing this specific `scheduler` instance and the desired timestep parameters. \n4.  Inside `retrieve_timesteps`, `scheduler.set_timesteps()` is invoked, modifying only the state of the `scheduler` instance passed to it. \n5.  The configured scheduler instance is then used for the subsequent diffusion process for that particular request.\n\nThis design ensures that each request has its own isolated scheduler configuration, preventing interference from concurrent requests.\n\nNotes:\nThe `retrieve_timesteps` function is copied across many pipeline files, indicating a common pattern for handling scheduler timestep configuration.    This widespread use reinforces the idea that scheduler configuration is handled on a per-instance basis. The `set_timesteps` methods within the scheduler classes themselves are responsible for updating the internal state of the scheduler object.  \n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-system-prevent-ra_04a370ba-7f6a-4e95-982f-8171e67fa10a"
+  },
+  {
+    "index": 19,
+    "id": "9f04e702-8627-4255-89a1-18ee7ed88045",
+    "repo": "prs/raw",
+    "commit": "64a5187d96f9376c7cf5123db810f2d2da79d7d0",
+    "pr": 12275,
+    "question": "How does the configuration handle AOBaseConfig instances versus string identifiers during initialization?",
+    "ground_truth_answer": "In TorchAoConfig.__init__ (src/diffusers/quantizers/quantization_config.py), the quant_type parameter can be either a string or an AOBaseConfig instance. The post_init method validates AOBaseConfig types by checking if torchao version is greater than 0.9.0 and verifying it's an AOBaseConfig instance. For string types, it performs validation against the supported quantization methods dictionary and checks keyword argument compatibility with the target quantization function's signature.",
+    "facts": [
+      "TorchAoConfig.__init__ accepts quant_type parameter as either a string or an AOBaseConfig instance",
+      "The post_init method validates AOBaseConfig types by checking torchao version > 0.9.0 and verifying the instance type",
+      "For string quant_type values, post_init validates against supported quantization methods dictionary and checks keyword argument compatibility with the target quantization function's signature"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/quantizers/quantization_config.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": "The inpainting ControlNet pipelines combine masked image information with control conditioning by concatenating the latent representations of the masked image and the mask itself along the channel dimension, and then passing this combined tensor to the U-Net for denoising  . The control conditioning, derived from a separate `control_image`, is applied to the U-Net through additional residual samples from the ControlNet model  .\n\n## Masked Image and Mask Preparation\n\nThe process begins by preparing the mask and the masked image. The `mask` and `masked_image_latents` are generated by the `prepare_mask_latents` method . For example, in `StableDiffusion3ControlNetInpaintingPipeline`, the `prepare_image_with_mask` method handles this by first preprocessing the input `image` and `mask` . It then creates a `masked_image` by setting the masked regions of the original image to a specific value (e.g., -1) . This `masked_image` is then encoded into latent space using the VAE , and the `mask` is resized to match the latent space dimensions . Finally, the `image_latents` (from the masked image) and the resized `mask` are concatenated along the channel dimension to form the `control_image` for the ControlNet .\n\n## Control Conditioning\n\nThe `control_image` (which can be a separate conditioning image or the masked image information itself) is passed to the ControlNet model  . The ControlNet processes this `control_image` along with the current latent model input and timestep to produce `down_block_res_samples` and `mid_block_res_sample`  . These samples represent the control conditioning information.\n\n## Combination with U-Net\n\nDuring the denoising loop, the `latent_model_input` (which is the noisy latent representation of the image being generated) is concatenated with the `mask` and `masked_image_latents` along the channel dimension  . This combined tensor is then fed into the U-Net . The `down_block_res_samples` and `mid_block_res_sample` from the ControlNet are passed to the U-Net as `down_block_additional_residuals` and `mid_block_additional_residual` respectively  . This allows the U-Net to incorporate both the inpainting mask information and the ControlNet's conditioning to predict the noise residual.\n\nAfter the U-Net predicts the noise, the scheduler performs a step to denoise the latents . For inpainting, the unmasked regions of the original `image_latents` are preserved by blending them with the newly denoised latents using the `mask`  .\n\n## Example Flow\n\nHere's a simplified flow of how these components interact:\n\n```mermaid\ngraph TD\n    A[Input Image] --> B{Prepare Masked Image and Mask Latents};\n    C[Input Mask] --> B;\n    B --> D[Concatenated Latent Model Input (Latents + Mask + Masked Image Latents)];\n    E[Control Image] --> F[ControlNet];\n    F --> G[ControlNet Residuals (down_block_res_samples, mid_block_res_sample)];\n    D --> H[U-Net];\n    G --> H;\n    H --> I[Noise Prediction];\n    I --> J[Scheduler Step];\n    J --> K[Blend with Original Image Latents (Inpainting)];\n    K --> L[Denoised Latents];\n```       \n\nNotes:\nThe `StableDiffusionXLControlNetInpaintPipeline`  and `StableDiffusion3ControlNetInpaintingPipeline`  are key examples of this mechanism. The `FluxControlNetInpaintPipeline` also follows a similar pattern for combining these inputs . The `num_channels_unet` configuration plays a role in determining how the latents, mask, and masked image latents are concatenated .\n\n\nView this search on DeepWiki: https://deepwiki.com/search/how-does-the-pipeline-combine_3089b86d-2bc7-4b8f-a7bc-4be8763913fe"
+  },
+  {
+    "index": 20,
+    "id": "61430fc4-348e-46d7-8798-fd5b7de363e8",
+    "repo": "prs/raw",
+    "commit": "67ffa7031e5a4bf0991b692a424e36ca59e64ec9",
+    "pr": 12225,
+    "question": "How does the inpainting pipeline combine the denoised latents with the original masked image during the denoising loop?",
+    "ground_truth_answer": "In QwenImageEditInpaintPipeline.__call__ (src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_inpaint.py), after each denoising step, the pipeline uses init_mask to blend the results: it takes (1 - init_mask) * init_latents_proper + init_mask * latents. This preserves the unmasked regions from the original image while allowing the masked regions to be generated. Before the next step, if not at the final timestep, init_latents_proper is re-noised to match the next timestep's noise level using scheduler.scale_noise.",
+    "facts": [
+      "QwenImageEditInpaintPipeline.__call__ uses init_mask to blend denoised results after each denoising step with the formula: (1 - init_mask) * init_latents_proper + init_mask * latents",
+      "The blending formula preserves unmasked regions from init_latents_proper while allowing masked regions (where init_mask=1) to use the generated latents",
+      "Before the next denoising step (if not at final timestep), init_latents_proper is re-noised using scheduler.scale_noise to match the next timestep's noise level",
+      "This blending mechanism is implemented in src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_inpaint.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_inpaint.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 21,
+    "id": "52aead1d-941b-40e4-9263-e70602e9adb5",
+    "repo": "prs/raw",
+    "commit": "865ba102b397b6f761423705142cbf9078d7b6d7",
+    "pr": 12223,
+    "question": "In what scenarios does the QwenImage pipeline enable classifier-free guidance during inference, and what warnings are issued when the configuration is inconsistent?",
+    "ground_truth_answer": "In QwenImagePipeline.__call__ (e.g., src/diffusers/pipelines/qwenimage/pipeline_qwenimage.py), classifier-free guidance is enabled when `do_true_cfg = true_cfg_scale > 1 and has_neg_prompt` is True. Two warnings are issued for inconsistent configurations: (1) if `true_cfg_scale > 1` but no `negative_prompt` is provided, it warns that CFG is not enabled despite the scale being set; (2) if `negative_prompt` is provided but `true_cfg_scale <= 1`, it warns that CFG is not enabled despite having a negative prompt.",
+    "facts": [
+      "In QwenImagePipeline.__call__, classifier-free guidance is enabled when `do_true_cfg = true_cfg_scale > 1 and has_neg_prompt` evaluates to True",
+      "A warning is issued if `true_cfg_scale > 1` but no `negative_prompt` is provided, indicating CFG is not enabled despite the scale being set",
+      "A warning is issued if `negative_prompt` is provided but `true_cfg_scale <= 1`, indicating CFG is not enabled despite having a negative prompt",
+      "The CFG enabling logic and warnings are implemented in QwenImagePipeline.__call__ in src/diffusers/pipelines/qwenimage/pipeline_qwenimage.py",
+      "Similar CFG configuration handling exists across related pipeline variants including pipeline_qwenimage_controlnet.py, pipeline_qwenimage_edit.py, pipeline_qwenimage_img2img.py, and pipeline_qwenimage_inpaint.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 5,
+      "key_files": [
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage.py",
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_controlnet.py",
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit.py",
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_img2img.py",
+        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_inpaint.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 22,
+    "id": "7b2c993b-3f30-41ea-b535-396bfa8473ca",
+    "repo": "prs/raw",
+    "commit": "f50b18eec7d646bf98aef576dbb0f47ff512beaa",
+    "pr": 12220,
+    "question": "How does the QwenImage pipeline handle both image\u2010to\u2010image and inpainting tasks using a single modular pipeline structure, and what mechanism determines which processing blocks are activated for each task?",
+    "ground_truth_answer": "In QwenImageAutoBlocks (src/diffusers/modular_pipelines/qwenimage/modular_blocks.py), an AutoPipelineBlocks pattern routes to different encoder/input/denoise blocks based on which conditional inputs are provided. Specifically, QwenImageAutoVaeEncoderStep checks for `mask_image` to activate QwenImageInpaintVaeEncoderStep, or `image` to activate QwenImageImg2ImgVaeEncoderStep. Similarly, QwenImageAutoInputStep routes to QwenImageInpaintInputStep when `processed_mask_image` is present, or QwenImageImg2ImgInputStep when `image_latents` is present but not the mask. This trigger\u2010based routing using the `block_trigger_inputs` attribute allows the same pipeline to handle multiple tasks without requiring separate pipeline classes.",
+    "facts": [
+      "QwenImageAutoBlocks uses an AutoPipelineBlocks pattern that routes to different encoder/input/denoise blocks based on which conditional inputs are provided",
+      "QwenImageAutoVaeEncoderStep checks for `mask_image` to activate QwenImageInpaintVaeEncoderStep, or `image` to activate QwenImageImg2ImgVaeEncoderStep",
+      "QwenImageAutoInputStep routes to QwenImageInpaintInputStep when `processed_mask_image` is present, or QwenImageImg2ImgInputStep when `image_latents` is present but not the mask",
+      "The trigger-based routing mechanism uses the `block_trigger_inputs` attribute to determine which processing blocks to activate",
+      "This routing mechanism allows a single pipeline to handle both image-to-image and inpainting tasks without requiring separate pipeline classes"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "broad",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "src/diffusers/modular_pipelines/qwenimage/modular_blocks.py",
+        "src/diffusers/modular_pipelines/qwenimage/encoders.py",
+        "src/diffusers/modular_pipelines/qwenimage/inputs.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 23,
+    "id": "2b87652a-8524-40cd-9dbc-0a456209cc67",
+    "repo": "prs/raw",
+    "commit": "561ab54de3d3aaa9007e76aeb3b15e8be3ed353f",
+    "pr": 12215,
+    "question": "How does the controlnet conditioning get injected into the latent space during the forward pass?",
+    "ground_truth_answer": "In QwenImageControlNetModel.forward (src/diffusers/models/controlnets/controlnet_qwenimage.py), the controlnet_cond is first passed through controlnet_x_embedder to get control embeddings, which are then added directly to the hidden_states after img_in processing: `hidden_states = hidden_states + self.controlnet_x_embedder(controlnet_cond)`. This modified hidden_states then flows through the transformer blocks, and each block's output is passed through corresponding controlnet_blocks to produce controlnet_block_samples that are scaled and returned.",
+    "facts": [
+      "In QwenImageControlNetModel.forward, controlnet_cond is passed through controlnet_x_embedder to generate control embeddings",
+      "The control embeddings are added directly to hidden_states after img_in processing using the operation: hidden_states = hidden_states + self.controlnet_x_embedder(controlnet_cond)",
+      "The modified hidden_states flows through transformer blocks, and each block's output is passed through corresponding controlnet_blocks",
+      "The controlnet_blocks produce controlnet_block_samples that are scaled and returned as the conditioning output"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/diffusers/models/controlnets/controlnet_qwenimage.py",
+        "src/diffusers/models/transformers/transformer_qwenimage.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 24,
+    "id": "0d57f455-f2ae-48d5-bcf3-94a2422d57e8",
+    "repo": "prs/raw",
+    "commit": "0fd7ee79ea54304a9e04921e5c8c841e1765de73",
+    "pr": 12209,
+    "question": "How does the codebase handle setting a custom attention backend for the transformer model when NPU flash attention is requested?",
+    "ground_truth_answer": "In the training scripts (e.g., train_dreambooth_flux.py, train_dreambooth_lora_flux.py), when the enable_npu_flash_attention flag is set, the code first checks if torch_npu is available using is_torch_npu_available(). If available, it calls transformer.set_attention_backend(\"_native_npu\") to configure the attention backend. This replaces the previous approach in transformer_flux.py where FluxAttnProcessor2_0_NPU was set as the default processor during initialization.",
+    "facts": [
+      "When enable_npu_flash_attention flag is set in training scripts (train_dreambooth_flux.py, train_dreambooth_lora_flux.py), the code checks if torch_npu is available using is_torch_npu_available()",
+      "If torch_npu is available, the code calls transformer.set_attention_backend(\"_native_npu\") to configure the attention backend",
+      "This set_attention_backend() approach replaces the previous method where FluxAttnProcessor2_0_NPU was set as the default processor during initialization in transformer_flux.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "broad",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "examples/dreambooth/train_dreambooth_flux.py",
+        "examples/dreambooth/train_dreambooth_lora_flux.py",
+        "src/diffusers/models/transformers/transformer_flux.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 25,
+    "id": "4d0d66dd-2a27-4839-9568-94b8a93cb861",
+    "repo": "prs/raw",
+    "commit": "900cf9d33bc091f3e47f8e598cba464f8b93bdd7",
+    "pr": 41997,
+    "question": "How does the image processor initialization handle kwargs passed through the from_dict method, and which kwargs are filtered before instantiation?",
+    "ground_truth_answer": "In BaseImageProcessor.from_dict (src/transformers/image_processing_base.py), the method first updates image_processor_dict with only those kwargs that exist in cls.valid_kwargs.__annotations__, then instantiates the image processor with the updated dict. After instantiation, any remaining kwargs that match existing image processor attributes are removed from the kwargs dict without setting them again, since they were already passed during initialization.",
+    "facts": [
+      "BaseImageProcessor.from_dict updates image_processor_dict with kwargs that exist in cls.valid_kwargs.__annotations__",
+      "The image processor is instantiated with the updated image_processor_dict",
+      "After instantiation, remaining kwargs that match existing image processor attributes are removed from the kwargs dict",
+      "Removed kwargs are not set again because they were already passed during initialization"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/image_processing_base.py",
+        "src/transformers/image_processing_utils_fast.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 26,
+    "id": "2db53603-2d5e-4c44-a8d3-4cd1c04399c2",
+    "repo": "prs/raw",
+    "commit": "b9f90dc388fd415a2ba2a6a31a372f451d4a4eed",
+    "pr": 41969,
+    "question": "How does the convolution bias configuration from the encoder settings propagate into the individual convolutional layers of the conformer's convolution module?",
+    "ground_truth_answer": "In ParakeetConformerConvolutionModule.__init__ (src/transformers/models/parakeet/modeling_parakeet.py), the config.convolution_bias attribute is passed as the bias parameter to all three Conv1d layers: pointwise_conv1, depthwise_conv, and pointwise_conv2. The same pattern applies in FastSpeech2ConformerConvolutionModule.__init__ (src/transformers/models/fastspeech2_conformer/modeling_fastspeech2_conformer.py).",
+    "facts": [
+      "In ParakeetConformerConvolutionModule.__init__, the config.convolution_bias attribute is passed as the bias parameter to three Conv1d layers: pointwise_conv1, depthwise_conv, and pointwise_conv2",
+      "In FastSpeech2ConformerConvolutionModule.__init__, the config.convolution_bias attribute is similarly passed as the bias parameter to the Conv1d layers",
+      "The convolution_bias configuration value from the encoder settings directly controls whether bias terms are used in all convolutional layers of the conformer's convolution module"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "src/transformers/models/parakeet/modeling_parakeet.py",
+        "src/transformers/models/parakeet/configuration_parakeet.py",
+        "src/transformers/models/fastspeech2_conformer/modeling_fastspeech2_conformer.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 27,
+    "id": "258d036c-9d9b-41bc-beca-39e783e16087",
+    "repo": "prs/raw",
+    "commit": "fd36275be2f3e56bc20da01f1f320b623b413957",
+    "pr": 41930,
+    "question": "How does the vision transformer class enable recording of hidden states and attention outputs during forward passes?",
+    "ground_truth_answer": "The SiglipVisionTransformer and Siglip2VisionTransformer classes define a _can_record_outputs dictionary mapping output types to their corresponding layer classes (e.g., 'hidden_states' maps to SiglipEncoderLayer/Siglip2EncoderLayer, 'attentions' maps to SiglipAttention/Siglip2Attention). The forward method is decorated with @check_model_inputs(tie_last_hidden_states=False), which uses this mapping to capture outputs from the appropriate layer instances during execution.",
+    "facts": [
+      "SiglipVisionTransformer and Siglip2VisionTransformer classes define a _can_record_outputs dictionary that maps output types to their corresponding layer classes",
+      "The _can_record_outputs dictionary maps 'hidden_states' to SiglipEncoderLayer/Siglip2EncoderLayer and 'attentions' to SiglipAttention/Siglip2Attention",
+      "The forward method is decorated with @check_model_inputs(tie_last_hidden_states=False)",
+      "The @check_model_inputs decorator uses the _can_record_outputs mapping to capture outputs from the appropriate layer instances during execution"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/siglip/modeling_siglip.py",
+        "src/transformers/models/siglip2/modeling_siglip2.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 28,
+    "id": "f3fe69aa-948e-4d18-9fab-67648f3a3439",
+    "repo": "prs/raw",
+    "commit": "8fb854cac869b42c87a7bd15d9298985c5aea96e",
+    "pr": 41914,
+    "question": "How does the workflow determine the base commit to compare against when checking for new test failures in a pull request scenario versus a scheduled run?",
+    "ground_truth_answer": "In check_failed_tests.yml, when `pr_number` is provided (pull request scenario), it fetches the PR info via GitHub API and extracts the first parent of the merge commit as `END_SHA` using `merge_commit.parents[0].sha`. For scheduled runs (when `pr_number` is empty), it calls `get_last_daily_ci_run_commit` to find the commit from the previous workflow run of the same type, setting that as `END_SHA`.",
+    "facts": [
+      "In check_failed_tests.yml, when pr_number is provided (pull request scenario), the workflow fetches PR info via GitHub API and extracts END_SHA using merge_commit.parents[0].sha",
+      "The merge_commit.parents[0].sha represents the first parent of the merge commit in pull request scenarios",
+      "For scheduled runs when pr_number is empty, the workflow calls get_last_daily_ci_run_commit to find the commit from the previous workflow run of the same type and sets it as END_SHA"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        ".github/workflows/check_failed_tests.yml"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 29,
+    "id": "e9981c54-095f-4e2b-b09f-cd72afda2fea",
+    "repo": "prs/raw",
+    "commit": "020e713ac8e70bd2e72bcd12dc6bd1ada6162562",
+    "pr": 41897,
+    "question": "How does the validation logic in the configuration class ensure compatibility between forward and backward data type selections?",
+    "ground_truth_answer": "In FPQuantConfig.post_init (src/transformers/utils/quantization_config.py), the method first validates that backward_dtype is one of 'bf16', 'mxfp8', or 'mxfp4'. Then it enforces a constraint that if backward_dtype is not 'bf16', the forward_dtype must be 'mxfp4', raising a ValueError otherwise to prevent unsupported forward-backward dtype combinations.",
+    "facts": [
+      "FPQuantConfig.post_init in src/transformers/utils/quantization_config.py validates that backward_dtype must be one of 'bf16', 'mxfp8', or 'mxfp4'",
+      "When backward_dtype is not 'bf16', FPQuantConfig.post_init enforces that forward_dtype must be 'mxfp4'",
+      "FPQuantConfig.post_init raises a ValueError if the forward-backward dtype combination is unsupported"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/utils/quantization_config.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 30,
+    "id": "39ac37d1-6f0c-429d-9cf9-ee34fd7ee035",
+    "repo": "prs/raw",
+    "commit": "fa22b569038540d31eacbf5d333a1e9aa0787131",
+    "pr": 41818,
+    "question": "Why must encoder_hidden_states be passed as a positional argument rather than a keyword argument when invoking the block's forward method in models using gradient checkpointing?",
+    "ground_truth_answer": "In GPTBigCodeBlock.forward (src/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py), encoder_hidden_states is passed as a positional argument so that torch.utils.checkpoint.checkpoint receives it as a positional argument and computes gradients for it. If it were passed as a keyword argument, GradientCheckpointingLayer would filter it out, preventing gradient computation. Meanwhile, layer_past is passed as a keyword argument specifically so GradientCheckpointingLayer can filter it (since use_reentrant=False would fail otherwise).",
+    "facts": [
+      "In GPTBigCodeBlock.forward, encoder_hidden_states is passed as a positional argument to torch.utils.checkpoint.checkpoint so gradients can be computed for it",
+      "If encoder_hidden_states were passed as a keyword argument, GradientCheckpointingLayer would filter it out and prevent gradient computation",
+      "layer_past is deliberately passed as a keyword argument so GradientCheckpointingLayer can filter it out, avoiding failures with use_reentrant=False",
+      "The distinction between positional and keyword arguments controls whether GradientCheckpointingLayer includes or excludes parameters from gradient checkpointing"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 31,
+    "id": "3c180147-5238-4519-874d-a550147f1a28",
+    "repo": "prs/raw",
+    "commit": "325810e7fccf8273599c58a525ae0011ea8ba3e6",
+    "pr": 41817,
+    "question": "How does the fast image processor avoid resizing images that are already smaller than the target dimensions?",
+    "ground_truth_answer": "In FuyuImageProcessorFast.resize (src/transformers/models/fuyu/image_processing_fuyu_fast.py), the method first checks if both image_width <= target_width and image_height <= target_height. If this condition is true, it returns the original image without any transformation. Only when at least one dimension exceeds the target size does it calculate an optimal scale factor (the minimum of height_scale_factor and width_scale_factor) and resize to new_height and new_width.",
+    "facts": [
+      "FuyuImageProcessorFast.resize() first checks if both image_width <= target_width and image_height <= target_height",
+      "If both dimensions are smaller than or equal to target dimensions, the method returns the original image without any transformation",
+      "Only when at least one dimension exceeds the target size does the method calculate an optimal scale factor (minimum of height_scale_factor and width_scale_factor)",
+      "The image is resized to new_height and new_width only when dimensions exceed target size"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/models/fuyu/image_processing_fuyu_fast.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 32,
+    "id": "0685662a-9a37-49ec-b83a-d7b2c02d9887",
+    "repo": "prs/raw",
+    "commit": "87be5595081364ef99393feeaa60d71db3652679",
+    "pr": 41790,
+    "question": "How does the decoder layer selection mechanism determine which attention mask type to apply during the forward pass in hybrid attention-state-space models?",
+    "ground_truth_answer": "In the forward methods of Lfm2Model and Lfm2MoeModel (found in modeling_lfm2.py and modeling_lfm2_moe.py), a conditional assignment creates `linear_attention` by checking if the input sequence length is 1 (decoding stage) versus multiple tokens (prefill stage). Then, for each decoder layer iteration, `layer_mask` is assigned either the causal 4D mask (if `decoder_layer.is_attention_layer` is True) or the 2D `linear_attention` mask otherwise. This ensures mamba/state-space layers receive proper 2D masking during prefill while attention layers get the causal mask.",
+    "facts": [
+      "In Lfm2Model and Lfm2MoeModel forward methods, a conditional assignment creates `linear_attention` by checking if input sequence length is 1 (decoding stage) versus multiple tokens (prefill stage)",
+      "For each decoder layer iteration, `layer_mask` is conditionally assigned based on `decoder_layer.is_attention_layer` boolean attribute",
+      "When `decoder_layer.is_attention_layer` is True, `layer_mask` receives the causal 4D mask",
+      "When `decoder_layer.is_attention_layer` is False, `layer_mask` receives the 2D `linear_attention` mask",
+      "This mechanism ensures mamba/state-space layers receive 2D masking during prefill while attention layers receive causal masking"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 4,
+      "key_files": [
+        "src/transformers/models/lfm2/modeling_lfm2.py",
+        "src/transformers/models/lfm2/modular_lfm2.py",
+        "src/transformers/models/lfm2_moe/modeling_lfm2_moe.py",
+        "src/transformers/models/lfm2_moe/modular_lfm2_moe.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 33,
+    "id": "4c09ff1a-f8bd-4b99-bae4-86c193d907d6",
+    "repo": "prs/raw",
+    "commit": "85c50557b97590538229f99a321ea88d03d6eaa7",
+    "pr": 41778,
+    "question": "What validation pattern is used across the Qwen3-Omni model family to ensure RoPE configuration consistency, and which keys are excluded from this validation?",
+    "ground_truth_answer": "The `rope_config_validation` function is invoked in both `Qwen3OmniMoeConfig` and `Qwen3OmniMoeThinkerConfig` constructors (in configuration_qwen3_omni_moe.py and modular_qwen3_omni_moe.py), passing `ignore_keys={\"mrope_section\", \"interleaved\", \"mrope_interleaved\"}`. Additionally, `Qwen3OmniMoeCode2WavConfig` calls `standardize_rope_params` followed by `rope_config_validation` without ignored keys. This ensures RoPE parameters are properly standardized while allowing certain multi-rotary-position-embedding-specific keys to be excluded from validation checks.",
+    "facts": [
+      "The `rope_config_validation` function is invoked in both `Qwen3OmniMoeConfig` and `Qwen3OmniMoeThinkerConfig` constructors",
+      "Both constructors pass `ignore_keys={\"mrope_section\", \"interleaved\", \"mrope_interleaved\"}` to `rope_config_validation`",
+      "`Qwen3OmniMoeCode2WavConfig` calls `standardize_rope_params` followed by `rope_config_validation` without ignored keys",
+      "The three excluded keys (mrope_section, interleaved, mrope_interleaved) are specific to multi-rotary-position-embedding configurations"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/qwen3_omni_moe/configuration_qwen3_omni_moe.py",
+        "src/transformers/models/qwen3_omni_moe/modular_qwen3_omni_moe.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 34,
+    "id": "18340e0e-d2dc-4958-b8ba-b928c285d8eb",
+    "repo": "prs/raw",
+    "commit": "ede7976cd2462ce868a0058c339c6b21baf7fc04",
+    "pr": 41758,
+    "question": "Why might certain attribute accesses on a vision-language model configuration be delegated to its text configuration subcomponent, and which attributes need to be explicitly excluded from this delegation to preserve correct model identification?",
+    "ground_truth_answer": "In Qwen2VLConfig and Qwen2_5_VLConfig, the __getattribute__ method delegates attribute access to text_config when present, allowing direct access to text model parameters. However, attributes like 'model_type' and '_name_or_path' must be excluded from this delegation (listed in the conditional check within __getattribute__) because they identify the parent vision-language model rather than its text component. Without these exclusions, accessing model_type would incorrectly return the text model's type instead of 'qwen2_vl' or 'qwen2_5_vl'.",
+    "facts": [
+      "Qwen2VLConfig and Qwen2_5_VLConfig implement __getattribute__ methods that delegate attribute access to text_config when present",
+      "The delegation allows direct access to text model parameters without explicitly accessing text_config",
+      "Attributes 'model_type' and '_name_or_path' are explicitly excluded from delegation via conditional checks in __getattribute__",
+      "These exclusions preserve model identification by ensuring model_type returns 'qwen2_vl' or 'qwen2_5_vl' instead of the text model's type",
+      "Without these exclusions, accessing model_type would incorrectly return the text component's model type rather than the vision-language model's type"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/qwen2_vl/configuration_qwen2_vl.py",
+        "src/transformers/models/qwen2_5_vl/configuration_qwen2_5_vl.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 35,
+    "id": "5335374c-35e4-4607-9649-0388f2e22225",
+    "repo": "prs/raw",
+    "commit": "7a833d1ccd41673030c85107f65f454c0c3222f5",
+    "pr": 41750,
+    "question": "How does the encoder now handle both causal and non-causal attention for text versus image modalities?",
+    "ground_truth_answer": "The encoder in CLIPTextTransformer (src/transformers/models/clip/modeling_clip.py) now uses create_causal_mask to generate attention masks and passes `is_causal=True` as a kwarg to self.encoder. This parameter is dynamically propagated through the attention layers via kwargs, allowing flash attention and SDPA to switch between causal (text) and full attention (image) modes. The old approach using separate causal_attention_mask and attention_mask parameters that were added together has been removed.",
+    "facts": [
+      "CLIPTextTransformer now uses create_causal_mask to generate attention masks for the encoder",
+      "The encoder passes `is_causal=True` as a kwarg to self.encoder, which is dynamically propagated through attention layers",
+      "The is_causal parameter allows flash attention and SDPA to switch between causal mode for text and full attention mode for images",
+      "The old approach of using separate causal_attention_mask and attention_mask parameters that were added together has been removed"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/clip/modeling_clip.py",
+        "src/transformers/models/metaclip_2/modeling_metaclip_2.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 36,
+    "id": "0d84da02-c70a-4053-bb81-c29c35360f4f",
+    "repo": "prs/raw",
+    "commit": "9a19171fad3025f57fae72d8f3598f44b68102e5",
+    "pr": 41725,
+    "question": "How does the fast variant handle resizing images to ensure dimensions are compatible with downstream processing requirements?",
+    "ground_truth_answer": "In GLPNImageProcessorFast.resize (src/transformers/models/glpn/image_processing_glpn_fast.py), the method takes the original image height and width, then rounds both down to the closest multiple of size_divisor using integer division: new_h = height // size_divisor * size_divisor and new_w = width // size_divisor * size_divisor. This ensures the output dimensions are evenly divisible by the specified divisor.",
+    "facts": [
+      "GLPNImageProcessorFast.resize method is located in src/transformers/models/glpn/image_processing_glpn_fast.py",
+      "The resize method rounds down both height and width to the closest multiple of size_divisor using integer division: new_h = height // size_divisor * size_divisor and new_w = width // size_divisor * size_divisor",
+      "This rounding operation ensures output dimensions are evenly divisible by the specified size_divisor parameter"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/models/glpn/image_processing_glpn_fast.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 37,
+    "id": "2764bec3-8783-440a-a895-01eb49ba8d05",
+    "repo": "prs/raw",
+    "commit": "71db0d49e99884566026c140f8b12b61056fa8dc",
+    "pr": 41672,
+    "question": "What data structure and naming convention are used when uploading benchmark run results to the Hub, and how are multiple benchmark entries combined before upload?",
+    "ground_truth_answer": "In BenchmarkRunner.push_results_to_hub (benchmark_v2/framework/benchmark_runner.py), each benchmark result is converted into a row dictionary containing benchmark_config_hash, config, measurements, and metadata fields. These rows are collected into a list and used to create a Dataset object via Dataset.from_list(). The dataset is then written to a JSONL file (one JSON object per line) in a temporary directory. The file is uploaded to the Hub with the naming pattern f\"benchmark_run_{timestamp}.jsonl\" where timestamp defaults to the current UTC time in %Y%m%d_%H%M%S format.",
+    "facts": [
+      "In BenchmarkRunner.push_results_to_hub, each benchmark result is converted into a row dictionary containing benchmark_config_hash, config, measurements, and metadata fields",
+      "The row dictionaries are collected into a list and used to create a Dataset object via Dataset.from_list()",
+      "The dataset is written to a JSONL file format (one JSON object per line) in a temporary directory",
+      "The file is uploaded to the Hub with the naming pattern f\"benchmark_run_{timestamp}.jsonl\" where timestamp defaults to current UTC time in %Y%m%d_%H%M%S format"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "benchmark_v2/framework/benchmark_runner.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 38,
+    "id": "5daa005b-ba77-42ee-89e8-4c181c81c0b7",
+    "repo": "prs/raw",
+    "commit": "8725ce10edb29771fb9a1aa108e6a04859efe973",
+    "pr": 41647,
+    "question": "In the expert routing mechanism, how is the separation between routing decisions and gating values maintained when using the bias correction term?",
+    "ground_truth_answer": "The bias correction term (e_score_correction_bias) is added to create a separate router_logits_for_choice tensor used exclusively for selecting experts via group_scores and scores_for_choice. However, the final topk_weights are gathered from the original router_logits (without bias), ensuring gating values multiplied with FFN outputs remain unaffected by the bias term. This separation is implemented in the route_tokens_to_experts method across modeling_deepseek_v3.py, modular_deepseek_v3.py, modeling_glm4_moe.py, and modeling_glm4v_moe.py.",
+    "facts": [
+      "The bias correction term (e_score_correction_bias) is added to create a separate router_logits_for_choice tensor that is used exclusively for expert selection",
+      "Expert selection uses router_logits_for_choice through group_scores and scores_for_choice computations",
+      "The final topk_weights are gathered from the original router_logits without the bias term",
+      "Gating values multiplied with FFN outputs use the original router_logits, keeping them unaffected by the bias correction",
+      "This separation mechanism is implemented in the route_tokens_to_experts method across modeling_deepseek_v3.py, modular_deepseek_v3.py, modeling_glm4_moe.py, and modeling_glm4v_moe.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 4,
+      "key_files": [
+        "src/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+        "src/transformers/models/deepseek_v3/modular_deepseek_v3.py",
+        "src/transformers/models/glm4_moe/modeling_glm4_moe.py",
+        "src/transformers/models/glm4v_moe/modeling_glm4v_moe.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 39,
+    "id": "0c1e6d0e-eb21-4343-91e0-3fd2887b46f1",
+    "repo": "prs/raw",
+    "commit": "5f8d02f2f12e771d59d473702bc61a7e7c4a6255",
+    "pr": 41626,
+    "question": "What happens if you call apply_chat_template with tokenize=False and return_dict=True together?",
+    "ground_truth_answer": "In tokenization_utils_base.py's PreTrainedTokenizerBase.apply_chat_template method, if tokenize=False is passed, return_dict is automatically forced to False regardless of its input value, since dictionaries are only returned by the tokenizer and there's no tokenizer output to wrap in a dict when tokenization is disabled.",
+    "facts": [
+      "PreTrainedTokenizerBase.apply_chat_template method is located in tokenization_utils_base.py",
+      "When tokenize=False is passed to apply_chat_template, return_dict is automatically forced to False",
+      "The return_dict parameter is forced to False because dictionaries are only returned by the tokenizer, and there is no tokenizer output when tokenization is disabled"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/tokenization_utils_base.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 40,
+    "id": "6fa73e4f-2a0e-4f48-bee5-148f7b6b477e",
+    "repo": "prs/raw",
+    "commit": "bf815e9b5ea076f758cc58f73f2be2d36237f9ec",
+    "pr": 41625,
+    "question": "How does the updated eager attention mechanism apply masking before computing attention probabilities?",
+    "ground_truth_answer": "In the eager_attention_forward function (e.g., src/transformers/models/vit/modeling_vit.py), when attention_mask is not None, it is first sliced to match the key sequence length using attention_mask[:, :, :, : key.shape[-2]], then added directly to the raw attention weights (attn_weights + attention_mask) before applying softmax. This additive masking approach replaces the previous implementation that applied softmax first and handled masking differently.",
+    "facts": [
+      "In eager_attention_forward function, when attention_mask is not None, it is first sliced to match the key sequence length using attention_mask[:, :, :, : key.shape[-2]]",
+      "The sliced attention_mask is added directly to the raw attention weights using attn_weights + attention_mask before applying softmax",
+      "This additive masking approach replaces the previous implementation that applied softmax first and then handled masking differently"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "src/transformers/models/vit/modeling_vit.py",
+        "src/transformers/models/deit/modeling_deit.py",
+        "src/transformers/models/dinov2/modeling_dinov2.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 41,
+    "id": "f48d5d50-a146-4f4e-8501-fdc6d290489a",
+    "repo": "prs/raw",
+    "commit": "eef9fb2af3db888cf93f81b425f9db453336726c",
+    "pr": 41612,
+    "question": "How does the encoder-decoder cache class handle initialization when provided with DDP-compatible cache data containing sliding window tensors?",
+    "ground_truth_answer": "In EncoderDecoderCache.__init__ (src/transformers/cache_utils.py), when a single iterable argument is passed, it checks the length of each combined_cache_data tuple. If the length is 6, it splits the tuple into two sets of 3 elements (key, value, sliding_window_tensor) for self-attention and cross-attention respectively. If the length is 4, it splits into two sets of 2 elements (key, value) without sliding window tensors for backward compatibility. These extracted data are then passed to DynamicCache constructors for both self_attention_cache and cross_attention_cache.",
+    "facts": [
+      "EncoderDecoderCache.__init__ accepts a single iterable argument containing combined_cache_data tuples",
+      "When combined_cache_data tuple length is 6, it splits into two sets of 3 elements (key, value, sliding_window_tensor) for self-attention and cross-attention",
+      "When combined_cache_data tuple length is 4, it splits into two sets of 2 elements (key, value) without sliding window tensors for backward compatibility",
+      "The extracted data from both split patterns are passed to DynamicCache constructors for self_attention_cache and cross_attention_cache"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/cache_utils.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 42,
+    "id": "1f971f0c-93f9-4f1f-8a46-24bdb8ad7a87",
+    "repo": "prs/raw",
+    "commit": "2935a1be19f12176c455cb65d67dc5a3bb84cd77",
+    "pr": 41605,
+    "question": "When flash attention is invoked with float32 queries, how does the system determine which dtype to cast them to before the forward pass?",
+    "ground_truth_answer": "The `get_target_dtype` function in `src/transformers/integrations/flash_attention.py` handles this. It first checks if autocast is enabled and returns `torch.get_autocast_gpu_dtype()`. If not, it checks for a `_pre_quantization_dtype` attribute on the config for quantized models. Otherwise, it iterates through the module's Linear layers and returns the weight dtype of the first one found.",
+    "facts": [
+      "The get_target_dtype function in src/transformers/integrations/flash_attention.py determines the target dtype for float32 queries before flash attention forward pass",
+      "If autocast is enabled, get_target_dtype returns torch.get_autocast_gpu_dtype()",
+      "If autocast is not enabled, get_target_dtype checks for a _pre_quantization_dtype attribute on the config for quantized models",
+      "If _pre_quantization_dtype is not available, get_target_dtype iterates through the module's Linear layers and returns the weight dtype of the first Linear layer found"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "src/transformers/integrations/flash_attention.py",
+        "src/transformers/models/bark/modeling_bark.py",
+        "src/transformers/models/stablelm/modeling_stablelm.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 43,
+    "id": "193e81b9-1707-4887-8150-047fbc3eb7ae",
+    "repo": "prs/raw",
+    "commit": "1fb3fc4db0e87fd7c2f57a36b6b32ee6fa69c50c",
+    "pr": 41577,
+    "question": "How does the refactored kernel loading approach handle the scenario where a requested kernel is not found in the hub mapping?",
+    "ground_truth_answer": "In lazy_load_kernel (src/transformers/integrations/hub_kernels.py), if the kernel_name is not in _HUB_KERNEL_MAPPING, it logs a warning message, sets mapping[kernel_name] to None, and returns None. If the `kernels` package is unavailable, it attempts backward compatibility by importing the kernel as a module (e.g., converting 'causal-conv1d' to 'causal_conv1d' and checking is_causal_conv1d_available), falling back to None if that also fails.",
+    "facts": [
+      "In lazy_load_kernel (src/transformers/integrations/hub_kernels.py), if kernel_name is not in _HUB_KERNEL_MAPPING, it logs a warning message, sets mapping[kernel_name] to None, and returns None",
+      "If the `kernels` package is unavailable, lazy_load_kernel attempts backward compatibility by importing the kernel as a module",
+      "For backward compatibility, lazy_load_kernel converts the kernel name format (e.g., 'causal-conv1d' to 'causal_conv1d') and checks availability using functions like is_causal_conv1d_available",
+      "If the backward compatibility import also fails, lazy_load_kernel falls back to returning None"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/integrations/hub_kernels.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 44,
+    "id": "9016b5c3-2dba-48dd-893c-72bd50531f18",
+    "repo": "prs/raw",
+    "commit": "9e4199ede396f136b3dff1e918816fcc3a65f0a0",
+    "pr": 41572,
+    "question": "How does the create_causal_mask_mapping method handle image group identification for tokens that are not part of an image?",
+    "ground_truth_answer": "In create_causal_mask_mapping (src/transformers/models/gemma3/modeling_gemma3.py and modular_gemma3.py), non-image tokens receive an image_group_ids value of -1. This is achieved by using torch.where to check the is_image boolean mask: where tokens are images, they get their computed image_group_ids value, otherwise they're assigned -1 directly as a scalar rather than using torch.full_like.",
+    "facts": [
+      "In create_causal_mask_mapping method, non-image tokens receive an image_group_ids value of -1",
+      "The method uses torch.where to check the is_image boolean mask to determine token types",
+      "For non-image tokens, -1 is assigned directly as a scalar rather than using torch.full_like",
+      "Image tokens get their computed image_group_ids value based on the torch.where condition"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/gemma3/modeling_gemma3.py",
+        "src/transformers/models/gemma3/modular_gemma3.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 45,
+    "id": "8bc25a47-57fa-4909-95a9-10488174b113",
+    "repo": "prs/raw",
+    "commit": "b3e3c3dc93f29770a768d6943c9fb9d377e5edce",
+    "pr": 41536,
+    "question": "When interpolating positional embeddings for vision patches, which input tensor's device is used to ensure tensor consistency across distributed training scenarios?",
+    "ground_truth_answer": "In fast_pos_embed_interpolate methods across the Qwen3VL model variants, the device is now taken from the grid_thw parameter rather than from pos_embed.weight.device. This change ensures idx_tensor, weight_tensor, and the embedding lookup results all reside on the same device, preventing device mismatch errors in FSDP2 training where pos_embed.weight may be on a meta device.",
+    "facts": [
+      "In fast_pos_embed_interpolate methods across Qwen3VL model variants, the device is taken from the grid_thw parameter instead of pos_embed.weight.device",
+      "This change ensures idx_tensor, weight_tensor, and embedding lookup results all reside on the same device",
+      "The device source change prevents device mismatch errors in FSDP2 training where pos_embed.weight may be on a meta device",
+      "The affected files include modeling_qwen3_vl.py, modeling_qwen3_vl_moe.py, modeling_qwen3_omni_moe.py, and modular_qwen3_vl.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 4,
+      "key_files": [
+        "src/transformers/models/qwen3_vl/modeling_qwen3_vl.py",
+        "src/transformers/models/qwen3_vl_moe/modeling_qwen3_vl_moe.py",
+        "src/transformers/models/qwen3_omni_moe/modeling_qwen3_omni_moe.py",
+        "src/transformers/models/qwen3_vl/modular_qwen3_vl.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 46,
+    "id": "ffe96dbd-d25d-470b-ac03-416b3e33de65",
+    "repo": "prs/raw",
+    "commit": "3813a8e3a1663993b3ec44c455cab8af1beca2b5",
+    "pr": 41534,
+    "question": "How does the new video processor maintain output compatibility with the existing image-based processor?",
+    "ground_truth_answer": "VideoMAEVideoProcessor overrides the preprocess method (in src/transformers/models/videomae/video_processing_videomae.py) to rename the output key from 'pixel_values_videos' (used internally by BaseVideoProcessor) to 'pixel_values', matching the naming convention expected by VideoMAE models and maintaining compatibility with VideoMAEImageProcessor's output format.",
+    "facts": [
+      "VideoMAEVideoProcessor overrides the preprocess method in src/transformers/models/videomae/video_processing_videomae.py",
+      "The preprocess method renames the output key from 'pixel_values_videos' to 'pixel_values'",
+      "BaseVideoProcessor internally uses 'pixel_values_videos' as the output key name",
+      "The 'pixel_values' key name matches the naming convention expected by VideoMAE models",
+      "This renaming maintains compatibility with VideoMAEImageProcessor's output format"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/models/videomae/video_processing_videomae.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 47,
+    "id": "af51032e-83ba-4245-84ad-2051e440afb5",
+    "repo": "prs/raw",
+    "commit": "70e871959c3ced65ee4804a55fb27b37876db2bf",
+    "pr": 41449,
+    "question": "How does the training loop determine the effective batch size when averaging tokens across devices versus using data parallelism?",
+    "ground_truth_answer": "In Trainer._get_num_items_in_batch (src/transformers/trainer.py), when average_tokens_across_devices is True and world_size > 1, the batch item count is gathered across all processes and summed. Otherwise, with n_gpu > 1 (data parallelism), the batch size is divided by n_gpu to approximate the per-device contribution.",
+    "facts": [
+      "Trainer._get_num_items_in_batch in src/transformers/trainer.py determines the effective batch size calculation method",
+      "When average_tokens_across_devices is True and world_size > 1, the batch item count is gathered across all processes and summed",
+      "When n_gpu > 1 (data parallelism) without token averaging, the batch size is divided by n_gpu to approximate per-device contribution"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/trainer.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 48,
+    "id": "6b75542e-7cd7-4250-be6f-64338bdc57fa",
+    "repo": "prs/raw",
+    "commit": "8976ceb0510e139282050a1b12d9e6afb21bce35",
+    "pr": 41432,
+    "question": "How does the AST-based approach extract function arguments while excluding self, *args, and **kwargs parameters?",
+    "ground_truth_answer": "The _extract_function_args helper (utils/check_docstrings.py) takes an ast.FunctionDef or ast.AsyncFunctionDef node and collects all argument names from posonlyargs, args, and kwonlyargs. It then filters out any argument named 'self' by returning only [a.arg for a in all_args if a.arg != \"self\"]. This approach naturally excludes *args (vararg) and **kwargs (kwarg) since they're stored in separate attributes (func_node.args.vararg and func_node.args.kwarg) that aren't included in the collection.",
+    "facts": [
+      "The _extract_function_args helper in utils/check_docstrings.py takes an ast.FunctionDef or ast.AsyncFunctionDef node as input",
+      "The function collects argument names from three sources: posonlyargs, args, and kwonlyargs attributes",
+      "Arguments named 'self' are filtered out using list comprehension: [a.arg for a in all_args if a.arg != 'self']",
+      "*args and **kwargs are naturally excluded because they are stored in separate attributes (func_node.args.vararg and func_node.args.kwarg) that are not included in the collection"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "utils/check_docstrings.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 49,
+    "id": "e6e8b554-0a2e-4f3b-9b23-ca2f230133b4",
+    "repo": "prs/raw",
+    "commit": "cf1e9834ec7339f4c605ba96d9c4e5cf59594cad",
+    "pr": 41421,
+    "question": "How does the continuous batching processor determine the padded sizes for query tokens and key-value cache when using CUDA graphs?",
+    "ground_truth_answer": "In ContinuousBatchProcessor._generation_step (src/transformers/generation/continuous_batching/continuous_api.py), when cuda graphs are enabled, it uses pad_by_intervals to compute padded_q from actual_query_length with NUM_Q_CUDA_GRAPHS intervals (max is max_batch_tokens), and padded_read_index_size from the maximum read_index size minus max_batch_tokens with NUM_KV_CUDA_GRAPHS intervals (max is num_blocks * block_size). These padded dimensions are then passed to get_model_kwargs to create static-shaped tensors required for CUDA graph capture.",
+    "facts": [
+      "ContinuousBatchProcessor._generation_step uses pad_by_intervals to compute padded sizes when CUDA graphs are enabled",
+      "padded_q is computed from actual_query_length using NUM_Q_CUDA_GRAPHS intervals with max_batch_tokens as maximum",
+      "padded_read_index_size is computed from maximum read_index size minus max_batch_tokens using NUM_KV_CUDA_GRAPHS intervals with num_blocks * block_size as maximum",
+      "The padded dimensions (padded_q and padded_read_index_size) are passed to get_model_kwargs to create static-shaped tensors required for CUDA graph capture"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/generation/continuous_batching/continuous_api.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 50,
+    "id": "4da6a343-60b2-4fbb-817c-7f473aea3efb",
+    "repo": "prs/raw",
+    "commit": "823fab4860ec7a5c71d8a21f834104c6deedfaa4",
+    "pr": 41415,
+    "question": "How does the BNB quantizer determine the actual module and tensor name when loading a pre-quantized checkpoint that contains quantized statistics like absmax or quant_map?",
+    "ground_truth_answer": "In Bnb4BitHfQuantizer.get_param_name (src/transformers/quantizers/quantizer_bnb_4bit.py), if pre_quantized is True and the param_name ends with any of the bnb_keys (e.g., 'absmax', 'quant_map'), it strips the quantized stat suffix by splitting on the last dot (or last two dots if 'quant_state.' is present) to get the base weight parameter name. This allows get_module_from_name to retrieve the actual nn.Module instead of searching for a non-existent submodule.",
+    "facts": [
+      "Bnb4BitHfQuantizer.get_param_name in src/transformers/quantizers/quantizer_bnb_4bit.py handles parameter name resolution for pre-quantized checkpoints",
+      "When pre_quantized is True and param_name ends with bnb_keys (e.g., 'absmax', 'quant_map'), the method strips the quantized stat suffix",
+      "The suffix is stripped by splitting on the last dot, or last two dots if 'quant_state.' is present, to obtain the base weight parameter name",
+      "This base parameter name is then used by get_module_from_name to retrieve the actual nn.Module instead of searching for a non-existent submodule"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/quantizers/quantizer_bnb_4bit.py",
+        "src/transformers/modeling_utils.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 51,
+    "id": "3af2bab2-681e-4fbc-bb8c-66de25096127",
+    "repo": "prs/raw",
+    "commit": "94df0e65602922be2831b3faa457a2bde78b936b",
+    "pr": 41408,
+    "question": "How does the new benchmarking framework determine which SDPA backend to use when a config specifies SDPA attention but leaves the backend unspecified?",
+    "ground_truth_answer": "In BenchmarkRunner.run_benchmarks() (benchmark_v2/framework/benchmark_runner.py), before running each benchmark config, there's a check: if config.attn_implementation == \"sdpa\" and config.sdpa_backend is None, it sets config.sdpa_backend to \"flash_attention\" as the default, with a warning logged that no SDPA backend was provided.",
+    "facts": [
+      "BenchmarkRunner.run_benchmarks() in benchmark_v2/framework/benchmark_runner.py checks if config.attn_implementation == 'sdpa' and config.sdpa_backend is None before running each benchmark",
+      "When SDPA attention is specified but sdpa_backend is None, the framework sets config.sdpa_backend to 'flash_attention' as the default",
+      "A warning is logged when the default SDPA backend is applied because no backend was explicitly provided in the config"
+    ],
+    "metadata": {
+      "difficulty": "moderate",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "benchmark_v2/framework/benchmark_runner.py",
+        "benchmark_v2/framework/benchmark_config.py"
+      ],
+      "is_core_question": false
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 52,
+    "id": "e519e15e-b50f-49f7-a55d-3dd49b0b750c",
+    "repo": "prs/raw",
+    "commit": "0c9a72e4576fe4c84077f066e585129c97bfd4e6",
+    "pr": 41401,
+    "question": "How does the routing mechanism decide which experts to activate in the sparse MoE block, and what role does the expert bias play when it's enabled?",
+    "ground_truth_answer": "In Lfm2MoeSparseMoeBlock.route_tokens_to_experts (src/transformers/models/lfm2_moe/modeling_lfm2_moe.py), the router first computes routing_weights by applying sigmoid to router_logits. If use_expert_bias is True, it adds the expert_bias buffer to routing_weights to get scores_for_routing, performs topk selection on these scores to get selected_experts, then gathers the original routing_weights at those indices. If use_expert_bias is False, it directly performs topk on routing_weights. The routing_weights are optionally normalized (if norm_topk_prob=True) and scaled by routed_scaling_factor before being returned.",
+    "facts": [
+      "Lfm2MoeSparseMoeBlock.route_tokens_to_experts computes routing_weights by applying sigmoid to router_logits",
+      "When use_expert_bias is True, expert_bias buffer is added to routing_weights to create scores_for_routing, topk selection is performed on these scores to get selected_experts, then original routing_weights are gathered at those indices",
+      "When use_expert_bias is False, topk selection is performed directly on routing_weights",
+      "The routing_weights are optionally normalized if norm_topk_prob is True",
+      "The routing_weights are scaled by routed_scaling_factor before being returned"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "src/transformers/models/lfm2_moe/modeling_lfm2_moe.py",
+        "src/transformers/models/lfm2_moe/modular_lfm2_moe.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 53,
+    "id": "c74aafa0-14b7-40b0-bf49-50aa52f98968",
+    "repo": "prs/raw",
+    "commit": "354567d955fbc5fbd70fc841b7a7bcc654bea3f1",
+    "pr": 41394,
+    "question": "How does the fast processor handle batch inputs differently from single image pairs when preprocessing images?",
+    "ground_truth_answer": "In SuperGlueImageProcessorFast._prepare_images_structure (src/transformers/models/superglue/image_processing_superglue_fast.py), the method uses flatten_pair_images to validate and flatten the input structure. If the input is a single pair (2 images), it returns them as-is for processing. If the input is multiple pairs (list of 2-element lists), it flattens all pairs into a single list. Later in _preprocess, the flattened images are processed together, then converted back into pairs by slicing every 2 consecutive images (image_pairs = [processed_images[i:i+2] for i in range(0, len(processed_images), 2)]) before stacking them into the final tensor format.",
+    "facts": [
+      "SuperGlueImageProcessorFast._prepare_images_structure uses flatten_pair_images to validate and flatten the input structure",
+      "For a single pair (2 images), flatten_pair_images returns them as-is without modification",
+      "For multiple pairs (list of 2-element lists), flatten_pair_images flattens all pairs into a single list",
+      "In _preprocess, flattened images are processed together as a batch",
+      "After processing, images are converted back into pairs using slicing: image_pairs = [processed_images[i:i+2] for i in range(0, len(processed_images), 2)]"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "src/transformers/models/superglue/image_processing_superglue_fast.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 54,
+    "id": "935685a6-dd35-438c-b1b3-85ce0e6b48c3",
+    "repo": "prs/raw",
+    "commit": "16d78bb2e32fc805238b4eddc7085aa79c941ffe",
+    "pr": 1983,
+    "question": "How does the fast sampling mode reduce computation when determining block sparsity patterns?",
+    "ground_truth_answer": "In BlockSparsityKernel (flash_attn/cute/compute_block_sparsity.py), fast sampling uses only 5 threads to check 5 strategic positions (4 corners plus center) of each block rather than examining all tile_m rows. Thread 0-3 check the corners and thread 4 checks the center, then vote_any_sync aggregates results from valid threads. This contrasts with full sampling where each of tile_m threads checks an entire row by looping over tile_n columns.",
+    "facts": [
+      "BlockSparsityKernel in flash_attn/cute/compute_block_sparsity.py implements fast sampling mode using only 5 threads to check strategic positions",
+      "Fast sampling checks 5 positions per block: 4 corners (threads 0-3) plus center (thread 4), instead of examining all tile_m rows",
+      "vote_any_sync aggregates results from the 5 valid threads to determine block sparsity",
+      "Full sampling mode uses tile_m threads where each thread checks an entire row by looping over tile_n columns",
+      "Fast sampling reduces computation by examining only 5 strategic positions rather than all tile_m \u00d7 tile_n positions in each block"
+    ],
+    "metadata": {
+      "difficulty": "moderate",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "flash_attn/cute/compute_block_sparsity.py"
+      ],
+      "is_core_question": false
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 55,
+    "id": "bf456c90-1473-4739-a5ce-b5f559ba4e1c",
+    "repo": "prs/raw",
+    "commit": "0256114fe2381ab293503219bdd9078de3cd26b3",
+    "pr": 1970,
+    "question": "How does the block sparsity validation logic ensure that count and index tensors have matching batch and head dimensions when they may initially have singleton dimensions?",
+    "ground_truth_answer": "In block_sparsity.py, the normalize_block_sparse_tensors function calls _expand_sparsity_tensor which checks if the tensor shape matches expected_shape (batch, nheads, n_blocks), and if not, verifies all dimensions are either equal or 1 (allowing broadcast). It then expands singleton dimensions via tensor.expand() and makes the result contiguous, enabling batched operations even when input tensors have shape (1, 1, n_blocks).",
+    "facts": [
+      "The normalize_block_sparse_tensors function in block_sparsity.py calls _expand_sparsity_tensor to validate and expand tensor dimensions",
+      "_expand_sparsity_tensor checks if tensor shape matches expected_shape (batch, nheads, n_blocks) and verifies all dimensions are either equal or 1 to allow broadcasting",
+      "_expand_sparsity_tensor expands singleton dimensions using tensor.expand() and makes the result contiguous",
+      "This expansion enables batched operations even when input tensors have shape (1, 1, n_blocks)"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "flash_attn/cute/block_sparsity.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 56,
+    "id": "e60ad9b9-4b07-48ef-afdc-a5fde8b941aa",
+    "repo": "prs/raw",
+    "commit": "67e88650129371e439342122208ab7bfc01557bf",
+    "pr": 1964,
+    "question": "How are the four separate block sparsity tensor parameters consolidated into a single structure when converting from PyTorch to CUTE representations?",
+    "ground_truth_answer": "In block_sparsity.py, the to_cute_block_sparse_tensors function takes a BlockSparseTensorsTorch NamedTuple containing mask_block_cnt, mask_block_idx, full_block_cnt, and full_block_idx (the latter two being optional). It converts each PyTorch tensor to a CUTE tensor via from_dlpack with assumed_align=4 and marks them as layout_dynamic, then returns a single BlockSparseTensors NamedTuple grouping all four CUTE tensors together. This consolidation is then passed as the blocksparse_tensors parameter to the forward kernel in flash_fwd.py, replacing the previous four separate parameter approach.",
+    "facts": [
+      "The to_cute_block_sparse_tensors function in block_sparsity.py takes a BlockSparseTensorsTorch NamedTuple containing mask_block_cnt, mask_block_idx, full_block_cnt, and full_block_idx parameters",
+      "Each PyTorch tensor is converted to a CUTE tensor using from_dlpack with assumed_align=4 and marked as layout_dynamic",
+      "The function returns a single BlockSparseTensors NamedTuple that groups all four converted CUTE tensors together",
+      "The consolidated BlockSparseTensors is passed as the blocksparse_tensors parameter to the forward kernel in flash_fwd.py",
+      "This approach replaces the previous method of passing four separate parameters to the kernel"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "flash_attn/cute/block_sparsity.py",
+        "flash_attn/cute/flash_fwd.py",
+        "flash_attn/cute/interface.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 57,
+    "id": "4fff8dca-03d3-4158-95cc-3616e6bbe4d5",
+    "repo": "prs/raw",
+    "commit": "e4d25a432ab5dec54cbe6aff40a0b7f1febfaf54",
+    "pr": 1961,
+    "question": "After the changes, what parameter name is used to pass auxiliary tensors (like document IDs) to FlexAttention's score_mod and mask_mod functions in the CuTe DSL implementation?",
+    "ground_truth_answer": "The parameter is renamed from `buffers` to `aux_tensors`. This change is consistently applied throughout the codebase in function signatures like `score_mod(scores, batch_idx, head_idx, q_idx, kv_idx, aux_tensors)` and `mask_mod(batch_idx, head_idx, q_idx, kv_idx, aux_tensors)`, as seen in files like flash_attn/cute/flash_fwd.py and flash_attn/cute/mask.py.",
+    "facts": [
+      "The parameter name is changed from `buffers` to `aux_tensors` for passing auxiliary tensors to FlexAttention functions",
+      "The renamed parameter is used in score_mod function signature: `score_mod(scores, batch_idx, head_idx, q_idx, kv_idx, aux_tensors)`",
+      "The renamed parameter is used in mask_mod function signature: `mask_mod(batch_idx, head_idx, q_idx, kv_idx, aux_tensors)`",
+      "This renaming is consistently applied across multiple files including flash_attn/cute/flash_fwd.py, flash_attn/cute/interface.py, flash_attn/cute/mask.py, and flash_attn/cute/softmax.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 4,
+      "key_files": [
+        "flash_attn/cute/flash_fwd.py",
+        "flash_attn/cute/interface.py",
+        "flash_attn/cute/mask.py",
+        "flash_attn/cute/softmax.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 58,
+    "id": "87e545a8-e186-43e5-923c-81a70f09f1c6",
+    "repo": "prs/raw",
+    "commit": "83eb8d6c082a6bd9c6c986a890eddae7ad2a257e",
+    "pr": 1945,
+    "question": "How does the backward kernel allocate and manage TMEM (Tensor Memory) resources across different stages of computation?",
+    "ground_truth_answer": "In FlashAttentionBackwardSm100.mma (flash_attn/cute/flash_bwd_sm100.py), the MMA warp (warp_idx == 12) first allocates TMEM using cute.arch.alloc_tmem with tmem_alloc_cols (512 columns). Different tensors are assigned distinct TMEM offsets: S/P at offset 0, dV at tmem_s_offset + n_block_size, dP/dQaccum at tmem_dV_offset + head_dim_v_padded, and dK at tmem_dP_offset + m_block_size. After all compute warps signal completion via tmem_dealloc_mbar_ptr barrier, the MMA warp deallocates TMEM using cute.arch.dealloc_tmem.",
+    "facts": [
+      "In FlashAttentionBackwardSm100.mma, the MMA warp (warp_idx == 12) allocates TMEM using cute.arch.alloc_tmem with tmem_alloc_cols parameter set to 512 columns",
+      "Different tensors are assigned distinct TMEM offsets: S/P at offset 0, dV at tmem_s_offset + n_block_size, dP/dQaccum at tmem_dV_offset + head_dim_v_padded, and dK at tmem_dP_offset + m_block_size",
+      "After all compute warps signal completion via tmem_dealloc_mbar_ptr barrier, the MMA warp deallocates TMEM using cute.arch.dealloc_tmem"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "flash_attn/cute/flash_bwd_sm100.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 59,
+    "id": "5c363be9-8a20-4142-a8ea-ccba1bf1de25",
+    "repo": "prs/raw",
+    "commit": "48ecd149c030dd250e1334bf59d5fe1591af9432",
+    "pr": 1944,
+    "question": "How does the build system determine whether to define the HIPIFY_V2 preprocessor macro during compilation?",
+    "ground_truth_answer": "In setup.py, the detect_hipify_v2() function checks if torch.utils.hipify.__version__ is >= 2.0.0. If true, the -DHIPIFY_V2 flag is added to both cxx and nvcc extra_compile_args via the maybe_hipify_v2_flag list, which conditionally defines the HIPIFY_V2 macro for all compiled sources.",
+    "facts": [
+      "The detect_hipify_v2() function in setup.py checks if torch.utils.hipify.__version__ is >= 2.0.0",
+      "If the version check is true, the -DHIPIFY_V2 flag is added to the maybe_hipify_v2_flag list",
+      "The maybe_hipify_v2_flag list is added to both cxx and nvcc extra_compile_args",
+      "The -DHIPIFY_V2 flag defines the HIPIFY_V2 preprocessor macro for all compiled sources"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "setup.py",
+        "csrc/flash_attn_ck/mha_bwd.cpp",
+        "csrc/flash_attn_ck/mha_fwd.cpp"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 60,
+    "id": "6657617b-4a29-4a02-ac27-e887251aaede",
+    "repo": "prs/raw",
+    "commit": "143b0ba20df0aca7d968d8ef5852ed10fe09caab",
+    "pr": 1942,
+    "question": "How does the block sparsity mainloop iteration differ between partially-masked and fully-computed blocks when intra-warpgroup overlap is enabled?",
+    "ground_truth_answer": "When intra_wg_overlap is enabled, the mainloop processes blocks in a staggered pattern. For partially-masked blocks, it loads K for the current block while simultaneously loading V for the previous block using separate pipeline states. The first partially-masked block loads K together with Q, then subsequent blocks alternate K and V loads across stages. Fully-computed blocks follow the same staggered pattern but skip mask_mod evaluation since they don't require per-element masking. The final block in either category completes with a last V-only load via process_last_half_block.",
+    "facts": [
+      "When intra_wg_overlap is enabled, the mainloop processes blocks in a staggered pattern where K loads for the current block occur simultaneously with V loads for the previous block using separate pipeline states",
+      "For partially-masked blocks, the first block loads K together with Q, then subsequent blocks alternate K and V loads across stages",
+      "Fully-computed blocks follow the same staggered K/V loading pattern as partially-masked blocks but skip mask_mod evaluation since they don't require per-element masking",
+      "The final block in either partially-masked or fully-computed categories completes with a V-only load via process_last_half_block"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "flash_attn/cute/flash_fwd.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 61,
+    "id": "6990bf39-2c23-46b6-b286-4ed42a153d71",
+    "repo": "prs/raw",
+    "commit": "e724e2588cbe754beb97cf7c011b5e7e34119e62",
+    "pr": 1940,
+    "question": "How does the system decide to use multiple splits when performing forward attention calculations with num_splits set to a negative value?",
+    "ground_truth_answer": "When num_splits < 1, the function num_splits_heuristic is called in interface.py. This heuristic first checks if num_n_blocks <= 4 and returns 1 split if true. Otherwise, it calculates the minimum of: num_SMs divided by total_mblocks, max_splits (128), and num_n_blocks. The total_mblocks depends on batch_size, num_head_kv, and the number of query blocks, while num_n_blocks is computed from the KV sequence length after accounting for any sliding window restrictions.",
+    "facts": [
+      "When num_splits < 1, the num_splits_heuristic function in interface.py is called to determine the number of splits",
+      "The num_splits_heuristic function returns 1 split if num_n_blocks <= 4",
+      "Otherwise, num_splits_heuristic calculates the minimum of: num_SMs divided by total_mblocks, max_splits (128), and num_n_blocks",
+      "total_mblocks is computed based on batch_size, num_head_kv, and the number of query blocks",
+      "num_n_blocks is computed from the KV sequence length after accounting for sliding window restrictions"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "flash_attn/cute/interface.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 62,
+    "id": "c4626d66-198d-4d4b-9a8e-d4b1497b4050",
+    "repo": "prs/raw",
+    "commit": "6bc3d1f59f5c843c9ccbc4f0d14cfe02b5e88ab3",
+    "pr": 1937,
+    "question": "How does the implementation ensure that score modification functions receive logical query indices rather than physical packed indices when grouped-query attention packing is enabled?",
+    "ground_truth_answer": "In apply_score_mod (flash_fwd_sm100.py) and apply_score_mod_inner (softmax.py), when pack_gqa is enabled, the physical q_idx is divided by qhead_per_kvhead to compute the logical query index. Additionally, for non-constant q_idx cases with Pack-GQA, the head index is adjusted per-element by computing head_offset = q_physical - q_idx_logical * qhead_per_kvhead and setting head_idx = head_idx * qhead_per_kvhead + head_offset. This ensures score_mod receives indices in the logical semantic space (B, Query_head_idx, seqlen_q_logical, seqlen_kv) as documented.",
+    "facts": [
+      "In apply_score_mod (flash_fwd_sm100.py) and apply_score_mod_inner (softmax.py), when pack_gqa is enabled, the physical q_idx is divided by qhead_per_kvhead to compute the logical query index",
+      "For non-constant q_idx cases with Pack-GQA, head_offset is computed as q_physical - q_idx_logical * qhead_per_kvhead",
+      "The head index is adjusted per-element by setting head_idx = head_idx * qhead_per_kvhead + head_offset",
+      "These transformations ensure score_mod receives indices in the logical semantic space (B, Query_head_idx, seqlen_q_logical, seqlen_kv)"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "flash_attn/cute/flash_fwd_sm100.py",
+        "flash_attn/cute/softmax.py",
+        "flash_attn/cute/flash_fwd.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 63,
+    "id": "9cc140ea-77b3-447a-8cbd-f8e29dc4e7e3",
+    "repo": "prs/raw",
+    "commit": "25f5d092b21d2d6b005ccd34092479a620ae4ceb",
+    "pr": 1934,
+    "question": "How does the main backward kernel determine which tiles are valid to process when variable-length sequences are enabled?",
+    "ground_truth_answer": "In FlashAttentionBackwardSm80.kernel (flash_attn/cute/flash_bwd.py), the kernel first creates a TileScheduler (either SingleTileScheduler or SingleTileVarlenScheduler depending on whether mCuSeqlensK is provided) and calls initial_work_tile_info() to get a work_tile. The kernel checks work_tile.is_valid_tile before executing the main computation logic. For varlen mode, this validity is determined by the tile scheduler based on cumulative sequence lengths and ensures tiles don't exceed actual sequence boundaries.",
+    "facts": [
+      "FlashAttentionBackwardSm80.kernel creates a TileScheduler, using SingleTileScheduler or SingleTileVarlenScheduler based on whether mCuSeqlensK is provided",
+      "The kernel calls initial_work_tile_info() on the TileScheduler to obtain a work_tile object",
+      "The kernel checks work_tile.is_valid_tile before executing main computation logic",
+      "In varlen mode, the tile scheduler determines validity based on cumulative sequence lengths to ensure tiles don't exceed actual sequence boundaries"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "flash_attn/cute/flash_bwd.py",
+        "flash_attn/cute/tile_scheduler.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 64,
+    "id": "f8ba533a-1628-466e-acdf-e99cb33c2684",
+    "repo": "prs/raw",
+    "commit": "5c1627a7a1cda9c32cb9b937a053564e663f81bc",
+    "pr": 1893,
+    "question": "How does the backward scheduler determine the order of processing memory blocks when causal masking and determinism are both enabled?",
+    "ground_truth_answer": "When both causal masking and determinism are enabled (Is_causal && Deterministic), the SingleTileBwdLPTScheduler uses a shortest-processing time (SPT) schedule by reversing the block traversal order. In tile_scheduler.hpp, when SPT is true, the block index is computed as `block = num_blocks - block - 1`, processing blocks from right to left. Additionally, in mainloop_bwd_sm90_tma_gmma_ws.hpp, the barrier wait compares against `n_block_max_for_m_block - 1 - n_block` instead of just `n_block`, ensuring mblocks within each nblock are visited in decreasing order for the reduce-add operation in dQ computation.",
+    "facts": [
+      "When Is_causal && Deterministic are both true, SingleTileBwdLPTScheduler uses a shortest-processing time (SPT) schedule by reversing block traversal order",
+      "In tile_scheduler.hpp, when SPT is true, the block index is computed as `block = num_blocks - block - 1`, processing blocks from right to left",
+      "In mainloop_bwd_sm90_tma_gmma_ws.hpp, the barrier wait compares against `n_block_max_for_m_block - 1 - n_block` instead of `n_block`",
+      "This barrier wait comparison ensures mblocks within each nblock are visited in decreasing order for the reduce-add operation in dQ computation"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "hopper/tile_scheduler.hpp",
+        "hopper/mainloop_bwd_sm90_tma_gmma_ws.hpp"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 65,
+    "id": "61938f54-6047-409b-a71e-619b93a50b3c",
+    "repo": "prs/raw",
+    "commit": "589cc20db3a982c8427bb19b42cf146a1a302bc1",
+    "pr": 1891,
+    "question": "How does the softmax implementation support serialization and reconstruction of non-constexpr state for the JIT compilation process?",
+    "ground_truth_answer": "The Softmax class implements __extract_mlir_values__ and __new_from_mlir_values__ methods (in flash_attn/cute/softmax.py). The former extracts non-constexpr fields (scale_log2, row_max, row_sum) into a flat list of MLIR values, tracking each field's item count in _values_pos. The latter reconstructs a new instance by splitting the values list according to _values_pos, calling cutlass.new_from_mlir_values on each original field, and creating a new object with the reconstructed state while preserving constexpr parameters like num_rows and arch.",
+    "facts": [
+      "The Softmax class implements __extract_mlir_values__ and __new_from_mlir_values__ methods in flash_attn/cute/softmax.py for JIT serialization support",
+      "__extract_mlir_values__ extracts non-constexpr fields (scale_log2, row_max, row_sum) into a flat list of MLIR values and tracks each field's item count in _values_pos",
+      "__new_from_mlir_values__ reconstructs a Softmax instance by splitting the values list according to _values_pos and calling cutlass.new_from_mlir_values on each original field",
+      "The reconstruction process preserves constexpr parameters like num_rows and arch while restoring the non-constexpr state"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 1,
+      "key_files": [
+        "flash_attn/cute/softmax.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 66,
+    "id": "67a0b72b-155f-40b8-b856-d1ce5d9d57db",
+    "repo": "prs/raw",
+    "commit": "2cc6fd6abbc5f1100e51eab63d92b678fda06c7d",
+    "pr": 1868,
+    "question": "How does the backward kernel compute the gradient with respect to queries (dQ) in the SM90 implementation?",
+    "ground_truth_answer": "In FlashAttentionBackwardSm90.mma_one_m_block (flash_attn/cute/flash_bwd_sm90.py), dQ is computed through a multi-step process: First, dS (scaled gradient of attention scores) is calculated as P*(dP-dPsum), where P is the attention weights and dP comes from dO@V^T. Then dQ is computed via matrix multiplication dS@K using tiled_mma_dQaccum. The result is accumulated in shared memory (sdQaccum) and later reduced atomically to global memory (mdQaccum) using TMA bulk reduce operations in the dQaccum_writer method, which calls tma_reduce_add_bulk_f32 from hopper_helpers.py.",
+    "facts": [
+      "In FlashAttentionBackwardSm90.mma_one_m_block, dS (scaled gradient of attention scores) is calculated as P*(dP-dPsum), where P is the attention weights and dP comes from dO@V^T",
+      "dQ is computed via matrix multiplication dS@K using tiled_mma_dQaccum",
+      "The dQ result is accumulated in shared memory (sdQaccum) and later reduced atomically to global memory (mdQaccum) using TMA bulk reduce operations",
+      "The dQaccum_writer method performs the atomic reduction by calling tma_reduce_add_bulk_f32 from hopper_helpers.py"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "flash_attn/cute/flash_bwd_sm90.py",
+        "flash_attn/cute/hopper_helpers.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 67,
+    "id": "ca65fa5e-20e5-464e-b078-aa9d471ad255",
+    "repo": "prs/raw",
+    "commit": "5183de433587a8aedd2450e9f18166c24521af29",
+    "pr": 1840,
+    "question": "How does the attention score modification framework handle the difference in how indices are represented between the softmax computation stages?",
+    "ground_truth_answer": "In flash_fwd.py, apply_score_mod is called before masking with partition_C indices directly from the MMA layout. In flash_fwd_sm100.py, the softmax_step function applies score_mod after copying from TMEM to registers (tSrS_t2r), requiring an additional partition_D step on the index tensor (tScS_t2r = thr_tmem_load.partition_D(tScS)). The SM100 version also supports a constant_q_idx optimization where all scores in a tile share the same q index, which is computed once and broadcast via apply_score_mod_inner.",
+    "facts": [
+      "In flash_fwd.py, apply_score_mod is called before masking with partition_C indices directly from the MMA layout",
+      "In flash_fwd_sm100.py, the softmax_step function applies score_mod after copying from TMEM to registers (tSrS_t2r)",
+      "The SM100 version requires an additional partition_D step on the index tensor: tScS_t2r = thr_tmem_load.partition_D(tScS)",
+      "The SM100 version supports a constant_q_idx optimization where all scores in a tile share the same q index",
+      "The constant_q_idx optimization computes the q index once and broadcasts it via apply_score_mod_inner"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 3,
+      "key_files": [
+        "flash_attn/cute/flash_fwd.py",
+        "flash_attn/cute/flash_fwd_sm100.py",
+        "flash_attn/cute/softmax.py"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 68,
+    "id": "78b5b7d4-31ea-4139-825c-cb3bdb297bd9",
+    "repo": "prs/raw",
+    "commit": "199401d31f940d1f062eb9c0233b41ef62baa5ae",
+    "pr": 1823,
+    "question": "How does the prepare kernel determine the number of splits for each batch when dynamic splitting is enabled?",
+    "ground_truth_answer": "In prepare_varlen_num_blocks_kernel (hopper/flash_prepare_scheduler.cu), if gridDim.x > 1 or num_splits_static == 1, all batches get num_splits = 1. Otherwise, it performs a warp sum of total blocks across batches, computes blocks_per_sm using ceil(total_blocks * 1.1 * num_head / num_sm) with a 10% margin, then sets num_splits_dynamic = max(min((num_n_blocks + blocks_per_sm - 1) / blocks_per_sm, num_splits_static), 1) to balance GPU occupancy.",
+    "facts": [
+      "In prepare_varlen_num_blocks_kernel, if gridDim.x > 1 or num_splits_static == 1, all batches get num_splits = 1",
+      "The kernel performs a warp sum of total blocks across batches to compute blocks_per_sm using ceil(total_blocks * 1.1 * num_head / num_sm) with a 10% margin",
+      "num_splits_dynamic is set to max(min((num_n_blocks + blocks_per_sm - 1) / blocks_per_sm, num_splits_static), 1) to balance GPU occupancy",
+      "The prepare_varlen_num_blocks_kernel function is located in hopper/flash_prepare_scheduler.cu"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "hopper/flash_prepare_scheduler.cu",
+        "hopper/flash.h"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  }
+]

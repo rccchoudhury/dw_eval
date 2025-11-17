@@ -1,0 +1,25 @@
+{
+  "total_prs": 104,
+  "accepted": 69,
+  "rejected": 35,
+  "acceptance_rate": 0.6634615384615384,
+  "by_substance_level": {
+    "high": 46,
+    "medium": 23,
+    "low": 0
+  },
+  "by_repository": {
+    "huggingface_diffusers": {
+      "accepted": 25,
+      "rejected": 14
+    },
+    "huggingface_transformers": {
+      "accepted": 29,
+      "rejected": 21
+    },
+    "Dao-AILab_flash-attention": {
+      "accepted": 15,
+      "rejected": 0
+    }
+  }
+}
