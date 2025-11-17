@@ -155,12 +155,17 @@ def find_all_pr_files(prs_raw_dir: str = "data/prs_raw") -> List[tuple]:
         logger.warning(f"Directory not found: {prs_raw_dir}")
         return pr_files
     
-    for subdir in prs_raw_path.iterdir():
-        if subdir.is_dir():
-            prs_file = subdir / "prs.json"
-            if prs_file.exists():
-                repo_name = subdir.name  # e.g., "huggingface_transformers"
-                pr_files.append((repo_name, str(prs_file)))
+    # Only look at ggml-org_llama.cpp
+    target_repo = "ggml-org_llama.cpp"
+    subdir = prs_raw_path / target_repo
+    if subdir.is_dir():
+        prs_file = subdir / "prs.json"
+        if prs_file.exists():
+            pr_files.append((target_repo, str(prs_file)))
+        else:
+            logger.warning(f"prs.json not found in {subdir}")
+    else:
+        logger.warning(f"Directory not found: {subdir}")
     
     return pr_files
 

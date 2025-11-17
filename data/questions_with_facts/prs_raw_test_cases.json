@@ -1,26 +1,29 @@
 [
   {
     "index": 0,
-    "id": "bd0cf257-c2c2-4641-ad83-d90075c32c01",
+    "id": "4c930add-c314-492b-8031-2aeae4dcdcf7",
     "repo": "prs/raw",
-    "commit": "04f9d2bf3d26e026244a13111d2f18bc95a5bb04",
-    "pr": 12593,
-    "question": "How does the rotary position embedding generation differ when processing exactly 2 frames versus a larger number of frames?",
-    "ground_truth_answer": "In ChronoEditRotaryPosEmbed.forward (src/diffusers/models/transformers/transformer_chronoedit.py), when num_frames equals 2, the temporal frequency components (freqs_cos_f and freqs_sin_f) are created by selecting only the first and last indices from the pre-computed frequencies up to temporal_skip_len (using [[0, -1]]). For other frame counts, the frequencies are taken sequentially from 0 to ppf. This special handling for 2 frames ensures proper positional encoding for the start and end frames in the editing task.",
+    "commit": "647b960bd8017ee882d6633bc2e43e2ae82ee85c",
+    "pr": 17031,
+    "question": "What determines whether the WebGPU matrix multiplication implementation uses subgroup matrices or register tiling?",
+    "ground_truth_answer": "The choice is determined by whether the adapter supports subgroup matrices and has a valid configuration. During initialization in ggml_backend_webgpu_reg_get_device, the code checks if the adapter has the ChromiumExperimentalSubgroupMatrix feature and validates subgroup matrix configs. It requires square f16 matrices of size 8 or 16 where M == N == K. If a valid config is found, ctx->supports_subgroup_matrix is set to true and subgroup matrix pipelines are created; otherwise, register tiling pipelines are used as a fallback.",
     "facts": [
-      "ChronoEditRotaryPosEmbed.forward in src/diffusers/models/transformers/transformer_chronoedit.py handles num_frames=2 as a special case",
-      "When num_frames equals 2, freqs_cos_f and freqs_sin_f are created by selecting only the first and last indices from pre-computed frequencies using [[0, -1]] up to temporal_skip_len",
-      "For other frame counts, the frequencies are taken sequentially from index 0 to ppf",
-      "The special handling for 2 frames ensures proper positional encoding for the start and end frames in the editing task"
+      "The choice between subgroup matrices and register tiling is determined during initialization in ggml_backend_webgpu_reg_get_device",
+      "The code checks if the adapter has the ChromiumExperimentalSubgroupMatrix feature",
+      "Valid subgroup matrix configurations require square f16 matrices of size 8 or 16 where M == N == K",
+      "If a valid config is found, ctx->supports_subgroup_matrix is set to true and subgroup matrix pipelines are created",
+      "Register tiling pipelines are used as a fallback when subgroup matrix support is unavailable or invalid"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 3,
       "key_files": [
-        "src/diffusers/models/transformers/transformer_chronoedit.py"
+        "ggml/src/ggml-webgpu/ggml-webgpu.cpp",
+        "ggml/src/ggml-webgpu/wgsl-shaders/mul_mat_subgroup_matrix.tmpl.wgsl",
+        "ggml/src/ggml-webgpu/wgsl-shaders/mul_mat_reg_tile.tmpl.wgsl"
       ],
       "is_core_question": true
     },
@@ -29,27 +32,28 @@
   },
   {
     "index": 1,
-    "id": "76133737-9c2c-4bbf-b73b-517399e4663d",
+    "id": "40e6bc94-a403-4767-bf02-e91102bb3bb9",
     "repo": "prs/raw",
-    "commit": "f5e5f348238e3ae30ef2ba49153e2c59e709401b",
-    "pr": 12585,
-    "question": "How does the latents initialization logic handle the case when latents are provided as input versus when they need to be generated?",
-    "ground_truth_answer": "In QwenImageBeforeDenoiseBlock.__call__ (src/diffusers/modular_pipelines/qwenimage/before_denoise.py), the block first adds 'latents' to its inputs list. During execution, it checks if block_state.latents is None. Only when None does it generate new latents using randn_tensor with the specified shape, generator, device, and dtype, then packs them via components.pachifier.pack_latents. If latents are already present (not None), this generation step is skipped entirely.",
+    "commit": "1032256ec95986f60124a62ace6a628106546497",
+    "pr": 17022,
+    "question": "In the bicubic upscaling implementation, how are the 16 surrounding pixels combined to produce the interpolated output value?",
+    "ground_truth_answer": "The bicubic interpolation uses a two-pass approach: first, four horizontal bicubic interpolations are performed across rows at y-offsets -1, 0, 1, and 2 using the fractional x-coordinate (dx). Each horizontal pass combines 4 pixels using weight functions (weight1 and weight2 with alpha=-0.75). Then, a final bicubic interpolation is performed vertically on these 4 intermediate results using the fractional y-coordinate (dy). This is implemented in both upscale_f32_bicubic (ggml/src/ggml-cuda/upscale.cu) and interpolate_bicubic (ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp).",
     "facts": [
-      "QwenImageBeforeDenoiseBlock.__call__ adds 'latents' to its inputs list",
-      "The block checks if block_state.latents is None during execution",
-      "When block_state.latents is None, new latents are generated using randn_tensor with specified shape, generator, device, and dtype parameters",
-      "Generated latents are packed via components.pachifier.pack_latents method",
-      "When block_state.latents is not None, the latents generation step is skipped entirely"
+      "Bicubic interpolation uses a two-pass approach: first performing four horizontal bicubic interpolations across rows at y-offsets -1, 0, 1, and 2",
+      "Each horizontal pass combines 4 pixels using weight functions (weight1 and weight2 with alpha=-0.75) and the fractional x-coordinate (dx)",
+      "A final vertical bicubic interpolation is performed on the 4 intermediate results using the fractional y-coordinate (dy)",
+      "This approach is implemented in upscale_f32_bicubic function in ggml/src/ggml-cuda/upscale.cu",
+      "The same approach is implemented in interpolate_bicubic function in ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 2,
       "key_files": [
-        "src/diffusers/modular_pipelines/qwenimage/before_denoise.py"
+        "ggml/src/ggml-cuda/upscale.cu",
+        "ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp"
       ],
       "is_core_question": true
     },
@@ -58,16 +62,18 @@
   },
   {
     "index": 2,
-    "id": "387d5f82-6730-488d-abf9-c7f7e1a106ca",
+    "id": "22ee8934-997e-4acc-a88d-a8ac85ec2340",
     "repo": "prs/raw",
-    "commit": "b3e9dfced7c9e8d00f646c710766b532383f04c6",
-    "pr": 12584,
-    "question": "How does the transformer model incorporate temporal information when processing video latents during the denoising loop?",
-    "ground_truth_answer": "In SanaVideoTransformer3DModel.forward (src/diffusers/models/transformers/transformer_sana_video.py), temporal information is incorporated through two mechanisms: (1) 3D rotary position embeddings computed by WanRotaryPosEmbed that encode frame, height, and width positions, and (2) GLUMBTempConv feed-forward blocks in each transformer layer that apply temporal convolutions (conv_temp with kernel size (3,1)) across the frame dimension after spatial processing, aggregating information across time while maintaining spatial structure.",
+    "commit": "8c583242adfe09cbf35e41353aa01fb96da301a0",
+    "pr": 16993,
+    "question": "When repacking Q8_0 tensors, how does the system determine which quantized value to store for each original block element?",
+    "ground_truth_answer": "In the repack method (ggml/src/ggml-cpu/kleidiai/kleidiai.cpp), for Q8_0 tensors, the system first computes a per-row scale by finding the maximum absolute value across all blocks (max_abs / 127.0f). Then for each element, it dequantizes using the original block's scale and quantized value (d * blk.ons[l]), multiplies by the inverse of the new row scale, rounds to the nearest integer, clamps to [-127, 127], and stores as int8_t in the qdata vector. This creates a uniform per-channel quantization suitable for KleidiAI's qai8dxp format.",
     "facts": [
-      "SanaVideoTransformer3DModel.forward incorporates temporal information through 3D rotary position embeddings computed by WanRotaryPosEmbed that encode frame, height, and width positions",
-      "GLUMBTempConv feed-forward blocks in each transformer layer apply temporal convolutions across the frame dimension after spatial processing",
-      "The temporal convolutions use conv_temp with kernel size (3,1) to aggregate information across time while maintaining spatial structure"
+      "The repack method in ggml/src/ggml-cpu/kleidiai/kleidiai.cpp computes a per-row scale by finding the maximum absolute value across all blocks and dividing by 127.0f",
+      "For each element, the system dequantizes using the original block's scale and quantized value (d * blk.ons[l])",
+      "The dequantized value is multiplied by the inverse of the new row scale, rounded to the nearest integer, and clamped to [-127, 127]",
+      "The clamped value is stored as int8_t in the qdata vector",
+      "This process creates a uniform per-channel quantization suitable for KleidiAI's qai8dxp format"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -76,7 +82,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/diffusers/models/transformers/transformer_sana_video.py"
+        "ggml/src/ggml-cpu/kleidiai/kleidiai.cpp"
       ],
       "is_core_question": true
     },
@@ -85,52 +91,58 @@
   },
   {
     "index": 3,
-    "id": "b7a78743-7c17-4838-99c4-e70530a108fc",
+    "id": "854afc12-5f09-4e5e-8cf3-2c329c5e0ce0",
     "repo": "prs/raw",
-    "commit": "8f80dda193f79af3ccd0f985906d61123d69df08",
-    "pr": 12566,
-    "question": "How does the modular pipeline handle memory availability checks when enabling CPU offload, and what happens if memory information cannot be obtained for a given device?",
-    "ground_truth_answer": "In ComponentsManager.__call__ (src/diffusers/modular_pipelines/components_manager.py), the code attempts to retrieve available memory using device_module.mem_get_info(execution_device.index)[0]. If this fails with an AttributeError (for devices that don't support this method), it raises a descriptive AttributeError indicating it doesn't know how to obtain memory info for that device module. The enable_auto_cpu_offload method includes a TODO comment noting that a warning should be added when mem_get_info isn't available on the target device.",
+    "commit": "aa374175c30184aeb1813ec71fc68780dd073906",
+    "pr": 16988,
+    "question": "What additional tensor property must now be validated before selecting optimized matrix multiplication kernels on CUDA, and what alignment requirement does it enforce?",
+    "ground_truth_answer": "The stride values (src0->nb) must now be checked in addition to element counts. Specifically, in ggml_cuda_should_use_mmf and ggml_cuda_should_use_mmvf (mmf.cu and mmvf.cu), the code validates that all strides are divisible by 2*sizeof(type), ensuring proper memory alignment for the vector load operations used by these kernels.",
     "facts": [
-      "ComponentsManager.__call__ retrieves available memory using device_module.mem_get_info(execution_device.index)[0]",
-      "If mem_get_info fails with AttributeError, the code raises a descriptive AttributeError indicating it cannot obtain memory info for that device module",
-      "The enable_auto_cpu_offload method contains a TODO comment noting that a warning should be added when mem_get_info isn't available on the target device"
-    ],
-    "metadata": {
-      "difficulty": "moderate",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "src/diffusers/modular_pipelines/components_manager.py"
-      ],
-      "is_core_question": false
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 4,
-    "id": "71950bf7-d8ed-4588-a54d-9edaae7ae5c2",
-    "repo": "prs/raw",
-    "commit": "250f5cb53db1554f32dee07ad002f6c3834306d0",
-    "pr": 12549,
-    "question": "What specific condition causes the AITER flash attention implementation to force return_lse to True even when the caller requests it to be False?",
-    "ground_truth_answer": "In _aiter_flash_attention (src/diffusers/models/attention_dispatch.py), when gradients are enabled (torch.is_grad_enabled() returns True) and return_lse is False, the implementation forces return_lse=True in the call to aiter_flash_attn_func because the aiter library requires it by assertion when gradients are enabled. The function then extracts only the output tensor to return if the caller didn't want lse.",
-    "facts": [
-      "In _aiter_flash_attention (src/diffusers/models/attention_dispatch.py), when torch.is_grad_enabled() returns True and return_lse is False, the implementation forces return_lse=True",
-      "The aiter library requires return_lse=True by assertion when gradients are enabled",
-      "When the caller sets return_lse=False but it was forced to True, the function extracts only the output tensor and discards the lse value before returning"
+      "Stride values (src0->nb) must now be checked in addition to element counts before selecting optimized matrix multiplication kernels on CUDA",
+      "The validation occurs in ggml_cuda_should_use_mmf and ggml_cuda_should_use_mmvf functions in mmf.cu and mmvf.cu",
+      "All strides must be divisible by 2*sizeof(type) to ensure proper memory alignment",
+      "The alignment requirement is necessary for vector load operations used by these optimized kernels"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 3,
       "key_files": [
-        "src/diffusers/models/attention_dispatch.py"
+        "ggml/src/ggml-cuda/mmf.cu",
+        "ggml/src/ggml-cuda/mmvf.cu",
+        "ggml/src/ggml-cuda/ggml-cuda.cu"
+      ],
+      "is_core_question": true
+    },
+    "status": "pending",
+    "deepwiki_answer": null
+  },
+  {
+    "index": 4,
+    "id": "e67c2b79-7259-472b-88c2-657a777cb60e",
+    "repo": "prs/raw",
+    "commit": "b4e335d8dc503ec0adf76fa4053ab7094b6310dd",
+    "pr": 16977,
+    "question": "In the Vulkan backend's fused operation for RMS normalization combined with multiplication and ROPE, how is data passed between the normalization and rotation stages without using intermediate device buffers?",
+    "ground_truth_answer": "Data is passed through shared memory (declared as `shared FLOAT_TYPE rope_data_a[1024]`). The RMS normalization stage writes results to this shared memory array (aliased as `data_d`), then a barrier synchronizes threads before the ROPE stage reads from the same shared memory. This approach avoids the overhead of writing to and reading from device memory, which improves performance for models where this pattern appears.",
+    "facts": [
+      "Data is passed between normalization and rotation stages through shared memory declared as `shared FLOAT_TYPE rope_data_a[1024]`",
+      "The RMS normalization stage writes results to shared memory (aliased as `data_d`)",
+      "A barrier synchronizes threads between the normalization write and ROPE read operations",
+      "The ROPE stage reads from the same shared memory array that normalization wrote to",
+      "This shared memory approach avoids the overhead of writing to and reading from device memory"
+    ],
+    "metadata": {
+      "difficulty": "hard",
+      "type": "open_question",
+      "scope": "deep",
+      "includes_code": false,
+      "n_context_files": 2,
+      "key_files": [
+        "ggml/src/ggml-vulkan/vulkan-shaders/rms_norm.comp",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp"
       ],
       "is_core_question": true
     },
@@ -139,29 +151,25 @@
   },
   {
     "index": 5,
-    "id": "8f820e8a-98de-4827-b863-acacd8de2099",
+    "id": "2bd58646-2afb-4415-b86b-58ea9e00dd25",
     "repo": "prs/raw",
-    "commit": "84e16575e4c5e90b6b49301cfa162ced4cf478d2",
-    "pr": 12545,
-    "question": "How does the text encoder's output get transformed before being fed into the transformer blocks?",
-    "ground_truth_answer": "In BriaFiboPipeline.get_prompt_embeds (src/diffusers/pipelines/bria_fibo/pipeline_bria_fibo.py), the text_encoder generates hidden states from tokenized input. The last two layers of these hidden states are concatenated along the feature dimension to form prompt_embeds. Then, in encode_prompt, these embeddings are padded to max_sequence_length and individual hidden_state layers are passed through caption_projection modules (defined in BriaFiboTransformer2DModel in src/diffusers/models/transformers/transformer_bria_fibo.py) which project from text_encoder_dim to inner_dim//2 before being concatenated with the main prompt embeddings for each transformer block.",
+    "commit": "9f052478c2c38ec10cb378109b110a1f7033ce11",
+    "pr": 16941,
+    "question": "How does the PanguEmbedded model determine the rope dimension count when it's not explicitly provided in the configuration?",
+    "ground_truth_answer": "In PanguEmbeddedModel.set_gguf_parameters (convert_hf_to_gguf.py), if head_dim is not present in hparams, rope_dim is computed as hidden_size divided by num_attention_heads. This calculated value is then written via add_rope_dimension_count and also used to set key_length and value_length.",
     "facts": [
-      "In BriaFiboPipeline.get_prompt_embeds, the text_encoder generates hidden states from tokenized input",
-      "The last two layers of hidden states are concatenated along the feature dimension to form prompt_embeds",
-      "The embeddings are padded to max_sequence_length in encode_prompt",
-      "Individual hidden_state layers are passed through caption_projection modules defined in BriaFiboTransformer2DModel",
-      "The caption_projection modules project from text_encoder_dim to inner_dim//2",
-      "The projected embeddings are concatenated with the main prompt embeddings for each transformer block"
+      "In PanguEmbeddedModel.set_gguf_parameters (convert_hf_to_gguf.py), if head_dim is not present in hparams, rope_dim is calculated as hidden_size divided by num_attention_heads",
+      "The calculated rope_dim value is written via the add_rope_dimension_count method",
+      "The calculated rope_dim is also used to set both key_length and value_length parameters"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "src/diffusers/pipelines/bria_fibo/pipeline_bria_fibo.py",
-        "src/diffusers/models/transformers/transformer_bria_fibo.py"
+        "convert_hf_to_gguf.py"
       ],
       "is_core_question": true
     },
@@ -170,25 +178,28 @@
   },
   {
     "index": 6,
-    "id": "f063ad15-2e3c-496e-ad81-e89b43642033",
+    "id": "486269cf-d966-430a-979c-8db3226d16d4",
     "repo": "prs/raw",
-    "commit": "d8e4805816df32ccecc070ccd6895e35cdafa723",
-    "pr": 12526,
-    "question": "How does the face adapter integrate its output with the main transformer hidden states during video generation?",
-    "ground_truth_answer": "In WanAnimateTransformer3DModel.forward (src/diffusers/models/transformers/transformer_wan_animate.py), the face adapter is applied every `inject_face_latents_blocks` transformer blocks (default 5). After each qualifying block, the face adapter output is moved to the hidden_states device if necessary (for model parallelism), then added residually to the transformer hidden_states: `hidden_states = face_adapter_output + hidden_states`.",
+    "commit": "9008027aa376526819415469f74fb9281136224e",
+    "pr": 16928,
+    "question": "How is the input embedding dimension calculated when a model uses DeepStack layers, and where is this logic centralized?",
+    "ground_truth_answer": "The input embedding dimension is calculated in llama_hparams::n_embd_inp() (src/llama-hparams.cpp). When n_deepstack_layers is greater than 0, it returns n_embd plus (n_embd * n_deepstack_layers), effectively stacking the main embeddings with auxiliary DeepStack embeddings along the feature dimension. This replaces the previous approach of modifying n_embd directly during model loading.",
     "facts": [
-      "In WanAnimateTransformer3DModel.forward, the face adapter is applied every `inject_face_latents_blocks` transformer blocks (default value is 5)",
-      "After each qualifying block, the face adapter output is moved to the hidden_states device if necessary to handle model parallelism",
-      "The face adapter output is integrated via residual addition: `hidden_states = face_adapter_output + hidden_states`"
+      "The input embedding dimension is calculated in the llama_hparams::n_embd_inp() method located in src/llama-hparams.cpp",
+      "When n_deepstack_layers is greater than 0, n_embd_inp() returns n_embd plus (n_embd * n_deepstack_layers)",
+      "The calculation stacks main embeddings with auxiliary DeepStack embeddings along the feature dimension",
+      "This approach replaces the previous method of directly modifying n_embd during model loading"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 3,
       "key_files": [
-        "src/diffusers/models/transformers/transformer_wan_animate.py"
+        "src/llama-hparams.cpp",
+        "src/llama-hparams.h",
+        "src/llama-model.cpp"
       ],
       "is_core_question": true
     },
@@ -197,27 +208,31 @@
   },
   {
     "index": 7,
-    "id": "1860a6a3-23f6-47f5-a9af-9e6143df17f1",
+    "id": "62e623a5-b620-4594-be4a-a504a7fb6c3e",
     "repo": "prs/raw",
-    "commit": "5afbcce176cd4e8ec08f43ee9fae2d6562edf54c",
-    "pr": 12520,
-    "question": "How does the text-to-video pipeline handle dual text encoding from different language models before feeding the embeddings into the transformer?",
-    "ground_truth_answer": "In Kandinsky5T2VPipeline.encode_prompt (src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py), the pipeline processes prompts through both Qwen2.5-VL (text_encoder) and CLIP (text_encoder_2) to generate two separate embedding tensors: prompt_embeds_qwen with shape [batch, seq_len, qwen_hidden_dim] and prompt_embeds_clip with shape [batch, clip_hidden_dim]. These dual embeddings are then passed to the transformer backbone (Kandinsky5Transformer3DModel) which has separate in_text_dim and in_text_dim2 parameters configured to match the respective hidden dimensions of each text encoder, enabling cross-attention with both text representations.",
+    "commit": "070ff4d5356083d60b807bb34d36b31c3653a29e",
+    "pr": 16921,
+    "question": "How are user-provided image token limits propagated from command-line arguments through to the vision model's preprocessing logic?",
+    "ground_truth_answer": "Command-line arguments `--image-min-tokens` and `--image-max-tokens` are first parsed into `common_params` fields (common/arg.cpp). These are then copied into `mtmd_context_params` during initialization (mtmd-cli.cpp, server.cpp). The mtmd context passes them to `clip_context_params` (mtmd.cpp), which stores them as `custom_image_min_tokens` and `custom_image_max_tokens` in `clip_hparams` (clip.cpp). Finally, `set_limit_image_tokens()` uses these custom values to override defaults when calculating `image_min_pixels` and `image_max_pixels` for preprocessing.",
     "facts": [
-      "Kandinsky5T2VPipeline.encode_prompt processes prompts through two text encoders: Qwen2.5-VL (text_encoder) and CLIP (text_encoder_2)",
-      "The encode_prompt method generates two separate embedding tensors: prompt_embeds_qwen with shape [batch, seq_len, qwen_hidden_dim] and prompt_embeds_clip with shape [batch, clip_hidden_dim]",
-      "Kandinsky5Transformer3DModel has separate in_text_dim and in_text_dim2 parameters configured to match the respective hidden dimensions of each text encoder",
-      "The dual embeddings are passed to Kandinsky5Transformer3DModel which enables cross-attention with both text representations"
+      "Command-line arguments --image-min-tokens and --image-max-tokens are parsed into common_params fields in common/arg.cpp",
+      "The common_params fields are copied into mtmd_context_params during initialization in mtmd-cli.cpp and server.cpp",
+      "The mtmd context passes the parameters to clip_context_params in mtmd.cpp",
+      "clip_context_params stores the values as custom_image_min_tokens and custom_image_max_tokens in clip_hparams in clip.cpp",
+      "set_limit_image_tokens() uses these custom values to override defaults when calculating image_min_pixels and image_max_pixels for preprocessing"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "broad",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 5,
       "key_files": [
-        "src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py",
-        "src/diffusers/models/transformers/transformer_kandinsky.py"
+        "common/arg.cpp",
+        "tools/mtmd/mtmd-cli.cpp",
+        "tools/server/server.cpp",
+        "tools/mtmd/mtmd.cpp",
+        "tools/mtmd/clip.cpp"
       ],
       "is_core_question": true
     },
@@ -226,18 +241,17 @@
   },
   {
     "index": 8,
-    "id": "c21a83a7-8acb-42d9-9b67-0e57152569f8",
+    "id": "bfe6cfdb-6ef1-404e-b37b-9d9b6f528f4f",
     "repo": "prs/raw",
-    "commit": "dc6bd1511a4948ebca35b22609002bba58e71c83",
-    "pr": 12508,
-    "question": "How does the text encoding process differ between the T5 encoder forward pass and the transformer forward pass in terms of attention masking?",
-    "ground_truth_answer": "In the T5 encoder forward pass, the original tokenizer attention mask is used directly (tokenizer_mask_device). However, for the transformer forward pass, a modified attention mask is created that extends one position beyond the last valid token: it uses torch.arange to create indices, then sets attention_mask to (mask_indices <= seq_lengths.unsqueeze(1)), which includes the first padding token. This is implemented in _get_t5_prompt_embeds in both pipeline_chroma.py and pipeline_chroma_img2img.py.",
+    "commit": "6b9a52422bac0f50dd8f1f8386744fa3ce9783bf",
+    "pr": 16906,
+    "question": "How does the preprocessing pipeline differ for this new vision model compared to standard image processing, particularly regarding aspect ratio handling?",
+    "ground_truth_answer": "In clip_image_preprocess within tools/mtmd/clip.cpp, the PROJECTOR_TYPE_JANUS_PRO case pads the input image to a square using gray color (RGB 127,127,127) before resizing to 384\u00d7384 using bilinear interpolation. This preserves the original aspect ratio by padding rather than distorting, then normalizes using the model's configured mean and std values.",
     "facts": [
-      "In the T5 encoder forward pass, the original tokenizer attention mask (tokenizer_mask_device) is used directly",
-      "For the transformer forward pass, a modified attention mask is created that extends one position beyond the last valid token",
-      "The modified mask is created using torch.arange to generate indices, then setting attention_mask to (mask_indices <= seq_lengths.unsqueeze(1)), which includes the first padding token",
-      "This attention masking logic is implemented in the _get_t5_prompt_embeds method",
-      "_get_t5_prompt_embeds is present in both pipeline_chroma.py and pipeline_chroma_img2img.py"
+      "In clip_image_preprocess within tools/mtmd/clip.cpp, the PROJECTOR_TYPE_JANUS_PRO case pads input images to a square using gray color (RGB 127,127,127)",
+      "After padding, the image is resized to 384\u00d7384 using bilinear interpolation",
+      "This preprocessing approach preserves the original aspect ratio by padding rather than distorting the image",
+      "The preprocessed image is normalized using the model's configured mean and std values"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -246,8 +260,8 @@
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/diffusers/pipelines/chroma/pipeline_chroma.py",
-        "src/diffusers/pipelines/chroma/pipeline_chroma_img2img.py"
+        "tools/mtmd/clip.cpp",
+        "convert_hf_to_gguf.py"
       ],
       "is_core_question": true
     },
@@ -256,27 +270,27 @@
   },
   {
     "index": 9,
-    "id": "1292d085-5624-4326-847e-2ab5fce2def9",
+    "id": "5530dc55-b4cd-48c3-94c3-4ac9b4c7e402",
     "repo": "prs/raw",
-    "commit": "23ebbb4bc81a17ebea17cb7cb94f301199e49a7f",
-    "pr": 12478,
-    "question": "How does the model handle visual conditioning when preparing latent variables for video generation?",
-    "ground_truth_answer": "In the prepare_latents method of Kandinsky5T2VPipeline (src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py), when self.transformer.visual_cond is True, the method concatenates zeros and a mask to the latents tensor. Specifically, it creates visual_cond as zeros matching latent shape, creates visual_cond_mask as zeros with shape matching spatial dimensions but with 1 channel, then concatenates all three tensors along the channel dimension using torch.cat([latents, visual_cond, visual_cond_mask], dim=-1).",
+    "commit": "d8b860a219c2415faac8cc0e50b48b4aa11e3b64",
+    "pr": 16901,
+    "question": "How does the assistant message component calculate and format the tokens-per-second metric for display?",
+    "ground_truth_answer": "In ChatMessageAssistant.svelte, the component checks if `currentConfig.showMessageStats` is enabled and if `message.timings.predicted_n` and `message.timings.predicted_ms` exist. It then calculates tokens per second using the formula `(message.timings.predicted_n / message.timings.predicted_ms) * 1000`, multiplying by 1000 to convert from milliseconds to seconds. The result is formatted to 2 decimal places using `toFixed(2)` and displayed with a Gauge icon.",
     "facts": [
-      "The prepare_latents method in Kandinsky5T2VPipeline checks if self.transformer.visual_cond is True to determine if visual conditioning should be applied",
-      "When visual conditioning is enabled, the method creates a visual_cond tensor filled with zeros that matches the latent tensor's shape",
-      "A visual_cond_mask tensor is created with zeros, matching the spatial dimensions of latents but with only 1 channel",
-      "The three tensors (latents, visual_cond, visual_cond_mask) are concatenated along the channel dimension using torch.cat([latents, visual_cond, visual_cond_mask], dim=-1)"
+      "ChatMessageAssistant.svelte checks if currentConfig.showMessageStats is enabled before displaying metrics",
+      "The component verifies that message.timings.predicted_n and message.timings.predicted_ms exist before calculation",
+      "Tokens per second is calculated using the formula (message.timings.predicted_n / message.timings.predicted_ms) * 1000",
+      "The multiplication by 1000 converts the timing from milliseconds to seconds",
+      "The calculated result is formatted to 2 decimal places using toFixed(2) and displayed with a Gauge icon"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "src/diffusers/pipelines/kandinsky5/pipeline_kandinsky.py",
-        "src/diffusers/models/transformers/transformer_kandinsky.py"
+        "tools/server/webui/src/lib/components/app/chat/ChatMessages/ChatMessageAssistant.svelte"
       ],
       "is_core_question": true
     },
@@ -285,16 +299,17 @@
   },
   {
     "index": 10,
-    "id": "5f0915ce-38f4-425f-9090-3033642e981c",
+    "id": "69acec87-f8c3-4639-88f7-06bae4326736",
     "repo": "prs/raw",
-    "commit": "a5a0ccf86a8b2468709f964704dd3667cbb7ac8f",
-    "pr": 12473,
-    "question": "How does the newly introduced abstraction handle situations where certain model subclasses don't implement a particular memory optimization feature?",
-    "ground_truth_answer": "The AutoencoderMixin class in vae.py checks for the existence of the corresponding attribute (use_tiling or use_slicing) before attempting to set it. If the attribute doesn't exist, it raises a NotImplementedError with a message indicating that the feature isn't implemented for that specific class. This is complemented by test logic in testing_utils.py that skips tests when models don't support these features.",
+    "commit": "a90eb94ca9ec19f049a1c8e4958e71d9da777569",
+    "pr": 16884,
+    "question": "In the fused RoPE implementation, how does the kernel handle writing directly to the set_rows destination when fusion is enabled, and what stride calculation is used?",
+    "ground_truth_answer": "In rope_norm and rope_neox kernels (ggml/src/ggml-cuda/rope.cu), when set_rows_stride is non-zero (indicating fusion), the kernel modifies the destination index calculation. Instead of writing to row_dst*ne0 + i0, it computes idst = row_x*ne0 + i0 and then adds row_indices[channel_x]*set_rows_stride. This allows the RoPE output to be written directly into the correct offset within the set_rows tensor, bypassing the intermediate view operation. The set_rows_stride is calculated as set_rows->nb[1] / ggml_type_size(set_rows->type) in ggml_cuda_op_rope_impl.",
     "facts": [
-      "AutoencoderMixin class in vae.py checks for the existence of use_tiling or use_slicing attributes before attempting to set them",
-      "If the attribute doesn't exist, AutoencoderMixin raises a NotImplementedError indicating the feature isn't implemented for that specific class",
-      "Test logic in testing_utils.py skips tests when models don't support tiling or slicing features"
+      "In rope_norm and rope_neox kernels, when set_rows_stride is non-zero, fusion is enabled and the destination index calculation is modified",
+      "With fusion enabled, the kernel writes to idst = row_x*ne0 + i0 + row_indices[channel_x]*set_rows_stride instead of row_dst*ne0 + i0",
+      "The set_rows_stride is calculated as set_rows->nb[1] / ggml_type_size(set_rows->type) in ggml_cuda_op_rope_impl",
+      "This direct write mechanism allows RoPE output to be written directly into the correct offset within the set_rows tensor, bypassing the intermediate view operation"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -303,8 +318,8 @@
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/diffusers/models/autoencoders/vae.py",
-        "tests/models/autoencoders/testing_utils.py"
+        "ggml/src/ggml-cuda/rope.cu",
+        "ggml/src/ggml-cuda/ggml-cuda.cu"
       ],
       "is_core_question": true
     },
@@ -313,28 +328,27 @@
   },
   {
     "index": 11,
-    "id": "a8089455-7a4a-4872-b9e1-abb3c3302abb",
+    "id": "392df409-3c6c-4ce5-97ad-9064174d0317",
     "repo": "prs/raw",
-    "commit": "cefc2cf82dbdb5e4f725374420f0f6a91eb69048",
-    "pr": 12456,
-    "question": "How does the text encoder component integrate with the pipeline during prompt encoding, and what preprocessing happens to the prompt text before tokenization?",
-    "ground_truth_answer": "The text encoder is a T5GemmaEncoder (Google's T5Gemma-2B-2B-UL2 model's encoder component). During prompt encoding in PhotonPipeline, prompts first pass through TextPreprocessor.clean_text() which performs comprehensive cleaning including URL removal, special character handling, spam pattern removal, and text normalization using ftfy. The cleaned text is then tokenized using GemmaTokenizerFast (with max_length=256), and the resulting input_ids and attention_mask are passed to the T5GemmaEncoder to generate text embeddings of shape [batch, seq_len, 2304], which serve as encoder_hidden_states for the transformer.",
+    "commit": "2e76e013600cb0d51ccf158571ca1d0502952a07",
+    "pr": 16868,
+    "question": "In the Vulkan matrix-vector multiply pipeline, how does the enable_bias flag interact with the MUL_MAT_ID path to determine the bias offset indexing strategy?",
+    "ground_truth_answer": "When enable_bias is set in the MUL_MAT_ID path (mul_mat_vec_base.glsl), the bias offset is calculated as `expert_id*p.stride_d + first_row + n`, using the expert_id extracted from data_ids[expert_idx]. This contrasts with the non-ID path which uses `j*p.batch_stride_d + d_offset + first_row + n`. The shader code conditionally compiles these different indexing schemes using #ifdef MUL_MAT_ID directives in the reduce_result function.",
     "facts": [
-      "The text encoder is a T5GemmaEncoder from Google's T5Gemma-2B-2B-UL2 model's encoder component",
-      "Prompts are preprocessed using TextPreprocessor.clean_text() which performs URL removal, special character handling, spam pattern removal, and text normalization using ftfy",
-      "The cleaned text is tokenized using GemmaTokenizerFast with max_length=256, producing input_ids and attention_mask",
-      "The T5GemmaEncoder generates text embeddings with shape [batch, seq_len, 2304]",
-      "These text embeddings serve as encoder_hidden_states for the transformer component in PhotonPipeline"
+      "In mul_mat_vec_base.glsl, when enable_bias is set in the MUL_MAT_ID path, the bias offset is calculated as `expert_id*p.stride_d + first_row + n`",
+      "The expert_id used in the MUL_MAT_ID bias calculation is extracted from data_ids[expert_idx]",
+      "The non-ID path calculates bias offset as `j*p.batch_stride_d + d_offset + first_row + n`",
+      "The shader uses #ifdef MUL_MAT_ID directives to conditionally compile the different indexing schemes in the reduce_result function"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
-      "scope": "broad",
+      "scope": "deep",
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/diffusers/pipelines/photon/pipeline_photon.py",
-        "docs/source/en/api/pipelines/photon.md"
+        "ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec_base.glsl",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp"
       ],
       "is_core_question": true
     },
@@ -343,17 +357,16 @@
   },
   {
     "index": 12,
-    "id": "57c8befe-df10-4a3b-82ae-149a7cc6d166",
+    "id": "95e5ad12-4a9a-422c-8744-068e53fc5051",
     "repo": "prs/raw",
-    "commit": "693d8a3a52252153dc0f1503ea87db89d2364693",
-    "pr": 12454,
-    "question": "How does the RoPE input preparation differ between the standard model and its Kontext variant when an input image is provided?",
-    "ground_truth_answer": "In FluxKontextRoPEInputsStep (src/diffusers/modular_pipelines/flux/before_denoise.py), when image_height and image_width are present, it creates separate img_ids for the input image by calling _prepare_latent_image_ids with the image dimensions and setting the first dimension to 1 instead of 0. These img_ids are then concatenated with the standard latent_ids to form the final img_ids tensor. The standard FluxRoPEInputsStep doesn't have this logic\u2014it only creates img_ids for the generation latents without handling separate input image dimensions.",
+    "commit": "4146d6a1a6228711a487a1e3e9ddd120f8d027d7",
+    "pr": 16857,
+    "question": "In the fused MoE reduction operation, what determines whether the template-specialized or dynamic loop version of the kernel is dispatched?",
+    "ground_truth_answer": "In launch_moe_expert_reduce (moe-expert-reduce.cu), the dispatcher checks n_expert_used against hardcoded values (1, 2, 4, 6, 8, 16, 32, 64, 128). If it matches, the corresponding template-specialized kernel (moe_expert_reduce_cuda<N>) is launched with compile-time loop unrolling. Otherwise, the default case launches moe_expert_reduce_cuda<0>, which uses a dynamic loop without unrolling.",
     "facts": [
-      "FluxKontextRoPEInputsStep in src/diffusers/modular_pipelines/flux/before_denoise.py creates separate img_ids for the input image when image_height and image_width are present",
-      "The separate img_ids are created by calling _prepare_latent_image_ids with the image dimensions and setting the first dimension to 1 instead of 0",
-      "The img_ids for the input image are concatenated with the standard latent_ids to form the final img_ids tensor",
-      "FluxRoPEInputsStep only creates img_ids for the generation latents without handling separate input image dimensions"
+      "The launch_moe_expert_reduce function in moe-expert-reduce.cu checks n_expert_used against hardcoded values (1, 2, 4, 6, 8, 16, 32, 64, 128)",
+      "If n_expert_used matches a hardcoded value, the corresponding template-specialized kernel moe_expert_reduce_cuda<N> is launched with compile-time loop unrolling",
+      "If n_expert_used does not match any hardcoded value, the default case launches moe_expert_reduce_cuda<0> which uses a dynamic loop without unrolling"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -362,7 +375,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/diffusers/modular_pipelines/flux/before_denoise.py"
+        "ggml/src/ggml-cuda/moe-expert-reduce.cu"
       ],
       "is_core_question": true
     },
@@ -371,26 +384,26 @@
   },
   {
     "index": 13,
-    "id": "5b8efe9b-f76c-4d23-839a-040e564bd71d",
+    "id": "1168921b-8ef2-4f1b-9d22-0d27feb1a3ea",
     "repo": "prs/raw",
-    "commit": "2dc31677e12fe175950f28fd5a0c0703594e7ce4",
-    "pr": 12445,
-    "question": "How does the pipeline compute the positional embeddings needed for rotary position encoding (RoPE) in the transformer?",
-    "ground_truth_answer": "In FluxRoPEInputsStep.__call__ (src/diffusers/modular_pipelines/flux/inputs.py), the step creates txt_ids as a zero tensor with shape (prompt_embeds.shape[1], 3) for text sequences. For images, it calls FluxPipeline._prepare_latent_image_ids() with the latent height/width (divided by 2) to generate img_ids containing spatial position information. Both are converted to the appropriate device and dtype before being passed to the denoiser.",
+    "commit": "31c511a968348281e11d590446bb815048a1e912",
+    "pr": 16843,
+    "question": "In the matrix multiplication kernel for Volta tensor cores, how are the four 8x8 mma operations parallelized per warp, and what is the default memory layout strategy used for the output tile?",
+    "ground_truth_answer": "In mma.cuh, the Volta implementation uses a tile<32, 8, T> structure where each warp performs 4 parallel 8x8 mma operations. The basic memory layout stacks 4 input tiles in the I direction and mirrors the B tile. By default, the i indices are permuted to simplify index calculations (unless GGML_CUDA_MMA_NO_VOLTA_PERM is defined), with the actual mma operation calling four separate mma.sync.aligned.m8n8k4 instructions in sequence.",
     "facts": [
-      "FluxRoPEInputsStep.__call__ creates txt_ids as a zero tensor with shape (prompt_embeds.shape[1], 3) for text sequences",
-      "FluxPipeline._prepare_latent_image_ids() is called with latent height/width divided by 2 to generate img_ids containing spatial position information",
-      "Both txt_ids and img_ids are converted to the appropriate device and dtype before being passed to the denoiser"
+      "In mma.cuh, the Volta implementation uses a tile<32, 8, T> structure where each warp performs 4 parallel 8x8 mma operations",
+      "The basic memory layout stacks 4 input tiles in the I direction and mirrors the B tile",
+      "By default, the i indices are permuted to simplify index calculations unless GGML_CUDA_MMA_NO_VOLTA_PERM is defined",
+      "The actual mma operation calls four separate mma.sync.aligned.m8n8k4 instructions in sequence"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "src/diffusers/modular_pipelines/flux/inputs.py",
-        "src/diffusers/modular_pipelines/flux/denoise.py"
+        "ggml/src/ggml-cuda/mma.cuh"
       ],
       "is_core_question": true
     },
@@ -399,17 +412,18 @@
   },
   {
     "index": 14,
-    "id": "b087340a-4356-416c-b05e-c0b6e39855d1",
+    "id": "e572b937-5176-4ff0-b697-af0aee741036",
     "repo": "prs/raw",
-    "commit": "c3675d4c9bb9c02521cd2c1aec198460c1657256",
-    "pr": 12416,
-    "question": "How does the image preprocessing strategy differ between the standard edit variant and the plus variant when preparing images for the VAE encoder?",
-    "ground_truth_answer": "In QwenImageEditProcessImagesInputStep (src/diffusers/modular_pipelines/qwenimage/encoders.py), the same resized_image is used for both VL encoding and VAE preprocessing. However, QwenImageEditPlusProcessImagesInputStep uses a separate vae_image input (created by QwenImageEditPlusResizeDynamicStep) instead of resized_image, allowing different image sizes for the vision-language encoder (384\u00d7384 condition image) versus the VAE encoder (1024\u00d71024).",
+    "commit": "2f966b8ed87514e74bb96592217226cb6a6974dd",
+    "pr": 16837,
+    "question": "How does the system determine whether to enable flash attention for CLIP models when the user doesn't explicitly specify a preference?",
+    "ground_truth_answer": "When flash_attn_type is set to AUTO, the system performs a warmup procedure that initially enables flash attention and calls alloc_compute_meta to build a test graph. It then checks all operations to see if the backend supports them, particularly looking for GGML_OP_FLASH_ATTN_EXT operations. If any flash attention operation is unsupported (ggml_backend_supports_op returns false), the system logs a warning and falls back to disabling flash attention by setting flash_attn_type to DISABLED and rebuilding the compute graph. This logic is implemented in the clip_model_loader::warmup method (tools/mtmd/clip.cpp).",
     "facts": [
-      "QwenImageEditProcessImagesInputStep uses the same resized_image for both VL encoding and VAE preprocessing",
-      "QwenImageEditPlusProcessImagesInputStep uses a separate vae_image input instead of resized_image for VAE preprocessing",
-      "The vae_image input is created by QwenImageEditPlusResizeDynamicStep",
-      "The plus variant allows different image sizes: 384\u00d7384 for the vision-language encoder and 1024\u00d71024 for the VAE encoder"
+      "When flash_attn_type is set to AUTO, the system performs a warmup procedure in clip_model_loader::warmup method",
+      "The warmup procedure initially enables flash attention and calls alloc_compute_meta to build a test graph",
+      "The system checks all operations for backend support using ggml_backend_supports_op, specifically looking for GGML_OP_FLASH_ATTN_EXT operations",
+      "If any flash attention operation is unsupported (ggml_backend_supports_op returns false), the system sets flash_attn_type to DISABLED and rebuilds the compute graph",
+      "The flash attention detection logic is implemented in clip_model_loader::warmup method in tools/mtmd/clip.cpp"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -418,8 +432,8 @@
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/diffusers/modular_pipelines/qwenimage/encoders.py",
-        "src/diffusers/modular_pipelines/qwenimage/modular_blocks.py"
+        "tools/mtmd/clip.cpp",
+        "tools/mtmd/clip.h"
       ],
       "is_core_question": true
     },
@@ -428,27 +442,26 @@
   },
   {
     "index": 15,
-    "id": "84f6710e-afb3-4e84-bc19-add4f15622d0",
+    "id": "547adeb9-d957-4226-8c5f-d08619c60cfc",
     "repo": "prs/raw",
-    "commit": "ec5449f3a1378df207df481bfa1ad7ff8057a58a",
-    "pr": 12389,
-    "question": "What HTTP client libraries are now supported for handling connection errors when downloading model files, and which specific exceptions are caught for each?",
-    "ground_truth_answer": "Both requests and httpx are now supported. In pipeline_loading_utils.py and pipeline_utils.py, the code catches requests.ConnectionError for the requests library and httpx.NetworkError for the httpx library, along with HfHubHTTPError (which replaced HTTPError) when attempting to connect to the Hub for model downloads.",
+    "commit": "0de0a01576772032008a689afc4d7c80685074c4",
+    "pr": 16831,
+    "question": "In the Minimax M2 model implementation, how are expert weights from individual expert layers merged during tensor conversion, and what determines when this merging occurs?",
+    "ground_truth_answer": "In MiniMaxM2Model.modify_tensors (convert_hf_to_gguf.py), expert weights are cached per-layer in self._experts_cache until all expert tensors (w1, w2, w3) for all n_experts are collected. The merging occurs when len(expert_cache) reaches n_experts * 3 weights. At that point, for each weight type (w1, w2, w3), tensors from all experts are gathered, stacked along dimension 0 using torch.stack, and written as a single merged tensor with a consolidated name like 'model.layers.{bid}.block_sparse_moe.experts.{w_name}.weight'.",
     "facts": [
-      "Both requests and httpx HTTP client libraries are now supported for handling connection errors during model downloads",
-      "In pipeline_loading_utils.py and pipeline_utils.py, requests.ConnectionError is caught for the requests library",
-      "In pipeline_loading_utils.py and pipeline_utils.py, httpx.NetworkError is caught for the httpx library",
-      "HfHubHTTPError (which replaced HTTPError) is also caught when attempting to connect to the Hub for model downloads"
+      "MiniMaxM2Model.modify_tensors() caches expert weights per-layer in self._experts_cache until all expert tensors are collected",
+      "Merging occurs when len(expert_cache) reaches n_experts * 3, representing all w1, w2, and w3 weights for all experts",
+      "For each weight type (w1, w2, w3), tensors from all experts are stacked along dimension 0 using torch.stack",
+      "The merged tensors are written with consolidated names following the pattern 'model.layers.{bid}.block_sparse_moe.experts.{w_name}.weight'"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "src/diffusers/pipelines/pipeline_loading_utils.py",
-        "src/diffusers/pipelines/pipeline_utils.py"
+        "convert_hf_to_gguf.py"
       ],
       "is_core_question": true
     },
@@ -457,26 +470,27 @@
   },
   {
     "index": 16,
-    "id": "321e7a9d-147b-4d2a-a5e0-d09f1776e158",
+    "id": "2695f5ea-7b4a-403c-86b1-00673a708dbc",
     "repo": "prs/raw",
-    "commit": "8c72cd12ee65e420c86a0724f0182f966f339a7e",
-    "pr": 12340,
-    "question": "How does the denoising loop handle condition video frames during the diffusion process?",
-    "ground_truth_answer": "In LucyEditPipeline.__call__ (src/diffusers/pipelines/lucy/pipeline_lucy_edit.py), the condition video is first encoded via self.vae.encode (using argmax mode) to produce condition_latents, which are normalized using latents_mean and latents_std. During each denoising step, these condition_latents are concatenated channel-wise with the noise latents via torch.cat([latents, condition_latents], dim=1) before being passed to the transformer model, allowing the model to use the condition video as guidance throughout the diffusion process.",
+    "commit": "e3af5563bd049141e036b50f843196db33d23e97",
+    "pr": 16825,
+    "question": "How does the KV cache prevent invalid attention patterns in M-RoPE models when tokens share the same temporal position but differ in spatial coordinates?",
+    "ground_truth_answer": "In llama_kv_cache::set_input_kq_mask (src/llama-kv-cache.cpp), when causal attention is enabled and ubatch->is_pos_2d() returns true (indicating M-RoPE), the function performs an additional check for tokens at the same temporal position (p0 == p1). It retrieves the stored spatial coordinates via cells.ext_get(j) and uses the is_2d_gt method to compare (x,y) positions, preventing attention from future spatial locations by skipping those cells where the key position is spatially greater than the query position.",
     "facts": [
-      "In LucyEditPipeline.__call__, the condition video is encoded using self.vae.encode with argmax mode to produce condition_latents",
-      "The condition_latents are normalized using latents_mean and latents_std",
-      "During each denoising step, condition_latents are concatenated channel-wise with noise latents via torch.cat([latents, condition_latents], dim=1)",
-      "The concatenated tensor is passed to the transformer model to use the condition video as guidance throughout the diffusion process"
+      "In llama_kv_cache::set_input_kq_mask (src/llama-kv-cache.cpp), when causal attention is enabled and ubatch->is_pos_2d() returns true, the function performs additional checks for M-RoPE models",
+      "For tokens at the same temporal position (p0 == p1), the function retrieves stored spatial coordinates via cells.ext_get(j)",
+      "The is_2d_gt method compares (x,y) spatial positions between key and query tokens",
+      "Attention from future spatial locations is prevented by skipping cells where the key position is spatially greater than the query position"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 2,
       "key_files": [
-        "src/diffusers/pipelines/lucy/pipeline_lucy_edit.py"
+        "src/llama-kv-cache.cpp",
+        "src/llama-kv-cells.h"
       ],
       "is_core_question": true
     },
@@ -485,28 +499,26 @@
   },
   {
     "index": 17,
-    "id": "027ba50a-bcca-43b9-b30a-85e88aa9a151",
+    "id": "d1b250ef-7da6-476a-af40-8ba2c56819b9",
     "repo": "prs/raw",
-    "commit": "eda9ff8300eb3b8ceec15ef69d74e35abd3d39b3",
-    "pr": 12328,
-    "question": "How does the system prevent race conditions when multiple concurrent requests need to configure schedulers with different timestep settings?",
-    "ground_truth_answer": "The system uses `async_retrieve_timesteps` with `return_scheduler=True` to obtain a scheduler copy already configured with timesteps, avoiding mutation of the shared scheduler. In `RequestScopedPipeline.generate` (examples/server-async/utils/requestscopedpipeline.py), it first calls `_make_local_scheduler` which attempts `clone_for_request` on the BaseAsyncScheduler-wrapped scheduler, falling back to `deepcopy` if needed. Then `async_retrieve_timesteps` (examples/server-async/utils/scheduler.py) calls `set_timesteps` only on this cloned scheduler instance and returns the configured scheduler along with timesteps, ensuring the original shared scheduler remains untouched.",
+    "commit": "3eb2be1ca5f37480aeb16102970d9e65f43347fe",
+    "pr": 16820,
+    "question": "How does the modified response queue processing eliminate the need for dedicated read threads in the dispatch path?",
+    "ground_truth_answer": "The dispatch path now uses blocking dspqueue_read calls with timeout in the flush() method instead of dspqueue_read_noblock with callbacks. This processes all responses in-place on the calling thread, eliminating the need for separate read threads and removing polling overhead from the htp_packet_callback approach.",
     "facts": [
-      "The system calls async_retrieve_timesteps with return_scheduler=True to obtain a scheduler copy that is already configured with timesteps",
-      "RequestScopedPipeline.generate calls _make_local_scheduler which attempts clone_for_request on the BaseAsyncScheduler-wrapped scheduler, falling back to deepcopy if needed",
-      "async_retrieve_timesteps calls set_timesteps only on the cloned scheduler instance and returns both the configured scheduler and timesteps",
-      "The original shared scheduler remains untouched because all mutations happen on cloned instances",
-      "This cloning mechanism prevents race conditions by ensuring each concurrent request operates on its own scheduler copy"
+      "The dispatch path now uses blocking dspqueue_read calls with timeout in the flush() method",
+      "Previously, the dispatch path used dspqueue_read_noblock with callbacks (htp_packet_callback approach)",
+      "Blocking dspqueue_read processes all responses in-place on the calling thread, eliminating separate read threads",
+      "The new approach removes polling overhead from the previous callback-based htp_packet_callback method"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "examples/server-async/utils/requestscopedpipeline.py",
-        "examples/server-async/utils/scheduler.py"
+        "ggml/src/ggml-hexagon/ggml-hexagon.cpp"
       ],
       "is_core_question": true
     },
@@ -515,18 +527,17 @@
   },
   {
     "index": 18,
-    "id": "d0b9a1f5-cea6-4db2-a3f2-2a8df2edb2bc",
+    "id": "456c89ca-2509-4020-a7b9-9187166affd3",
     "repo": "prs/raw",
-    "commit": "4e36bb0d23a0450079560ac12d2858e2eb3f7e24",
-    "pr": 12301,
-    "question": "How does the pipeline combine masked image information with control conditioning for the inpainting controlnet?",
-    "ground_truth_answer": "In QwenImageControlNetInpaintPipeline.prepare_image_with_mask (src/diffusers/pipelines/qwenimage/pipeline_qwenimage_controlnet_inpaint.py), the pipeline first creates a masked_image by cloning the input image and setting masked regions (where mask > 0.5) to -1. This masked image is then encoded through the VAE to get image_latents. The mask is downsampled to match the latent dimensions and inverted (1 - mask). Finally, image_latents and the inverted mask are concatenated along the channel dimension to form the control_image, which is then packed and passed to the controlnet.",
+    "commit": "85a7d8677bf2200981e52f744a21d5267964ffcf",
+    "pr": 16812,
+    "question": "How is the tensor shape padding value for K and V tensors determined when computing the number of KV pairs needed for a slot?",
+    "ground_truth_answer": "In llama_kv_cache::get_n_kv (src/llama-kv-cache.cpp), the padding value is set to the maximum of n_pad and 256. This padded value (n_pad_cur) is then used with GGML_PAD to round up the used cells, ensuring the graph remains constant across batches and can be reused. The minimum of 256 helps maintain performance with certain backends.",
     "facts": [
-      "QwenImageControlNetInpaintPipeline.prepare_image_with_mask creates a masked_image by cloning the input image and setting masked regions (where mask > 0.5) to -1",
-      "The masked image is encoded through the VAE to produce image_latents",
-      "The mask is downsampled to match latent dimensions and inverted (1 - mask)",
-      "image_latents and the inverted mask are concatenated along the channel dimension to form the control_image",
-      "The control_image is packed and passed to the controlnet"
+      "In llama_kv_cache::get_n_kv (src/llama-kv-cache.cpp), the padding value is set to the maximum of n_pad and 256",
+      "The padded value (n_pad_cur) is used with GGML_PAD to round up the used cells",
+      "This padding ensures the computation graph remains constant across batches and can be reused",
+      "The minimum padding of 256 helps maintain performance with certain backends"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -535,7 +546,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_controlnet_inpaint.py"
+        "src/llama-kv-cache.cpp"
       ],
       "is_core_question": true
     },
@@ -544,16 +555,17 @@
   },
   {
     "index": 19,
-    "id": "9f04e702-8627-4255-89a1-18ee7ed88045",
+    "id": "6b6ad75b-1944-4da9-b14b-96d143eca512",
     "repo": "prs/raw",
-    "commit": "64a5187d96f9376c7cf5123db810f2d2da79d7d0",
-    "pr": 12275,
-    "question": "How does the configuration handle AOBaseConfig instances versus string identifiers during initialization?",
-    "ground_truth_answer": "In TorchAoConfig.__init__ (src/diffusers/quantizers/quantization_config.py), the quant_type parameter can be either a string or an AOBaseConfig instance. The post_init method validates AOBaseConfig types by checking if torchao version is greater than 0.9.0 and verifying it's an AOBaseConfig instance. For string types, it performs validation against the supported quantization methods dictionary and checks keyword argument compatibility with the target quantization function's signature.",
+    "commit": "338074c383c81366320d176d83b94b0a567ee0c2",
+    "pr": 16808,
+    "question": "How does the backward pass normalization kernel handle cross-warp reduction when multiple warps are involved in processing a single row?",
+    "ground_truth_answer": "In ggml_sycl_op_rms_norm_back (ggml/src/ggml-sycl/norm.cpp), after each warp reduces its partial sums using warp_reduce_sum, if nwarps > 1, the first thread of each warp writes its reduced xx and xg values to local memory arrays l_xx and l_xg. Then a barrier synchronizes all threads. Finally, threads in the first subgroup (sg_id == 0) read these per-warp values, perform a second warp_reduce_sum to get the global totals xx_total and xg_total, which are then broadcast to all threads via group_broadcast for computing inv_r and coeff.",
     "facts": [
-      "TorchAoConfig.__init__ accepts quant_type parameter as either a string or an AOBaseConfig instance",
-      "The post_init method validates AOBaseConfig types by checking torchao version > 0.9.0 and verifying the instance type",
-      "For string quant_type values, post_init validates against supported quantization methods dictionary and checks keyword argument compatibility with the target quantization function's signature"
+      "In ggml_sycl_op_rms_norm_back (ggml/src/ggml-sycl/norm.cpp), each warp first reduces its partial sums using warp_reduce_sum to compute local xx and xg values",
+      "When nwarps > 1, the first thread of each warp writes its reduced xx and xg values to local memory arrays l_xx and l_xg, followed by a barrier synchronization",
+      "Threads in the first subgroup (sg_id == 0) read the per-warp values from l_xx and l_xg and perform a second warp_reduce_sum to compute global totals xx_total and xg_total",
+      "The global totals xx_total and xg_total are broadcast to all threads via group_broadcast for computing inv_r and coeff"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -562,7 +574,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/diffusers/quantizers/quantization_config.py"
+        "ggml/src/ggml-sycl/norm.cpp"
       ],
       "is_core_question": true
     },
@@ -571,17 +583,18 @@
   },
   {
     "index": 20,
-    "id": "61430fc4-348e-46d7-8798-fd5b7de363e8",
+    "id": "dca662d5-bae6-440c-b8c3-42b1cfff9867",
     "repo": "prs/raw",
-    "commit": "67ffa7031e5a4bf0991b692a424e36ca59e64ec9",
-    "pr": 12225,
-    "question": "How does the inpainting pipeline combine the denoised latents with the original masked image during the denoising loop?",
-    "ground_truth_answer": "In QwenImageEditInpaintPipeline.__call__ (src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_inpaint.py), after each denoising step, the pipeline uses init_mask to blend the results: it takes (1 - init_mask) * init_latents_proper + init_mask * latents. This preserves the unmasked regions from the original image while allowing the masked regions to be generated. Before the next step, if not at the final timestep, init_latents_proper is re-noised to match the next timestep's noise level using scheduler.scale_noise.",
+    "commit": "ad8d36beffd791db10c94eb9e964afb891e3ca55",
+    "pr": 16800,
+    "question": "In the SYCL SSM_CONV implementation, how does each work-item locate the correct input window and convolution weights needed to compute a single output element?",
+    "ground_truth_answer": "In kernel_ssm_conv (ggml/src/ggml-sycl/ssm_conv.cpp), each work-item derives (channel, token, seq) from its global index, then computes a pointer `s` to the start of the input window using seq*src_stride_seq + channel*src_stride_inner + token, and a pointer `c` to the weights using channel*d_conv. The dot-product loops over d_conv elements using s[i0]*c[i0], and writes the result to dst_data at the flattened index computed from (seq, token, channel) and the destination strides.",
     "facts": [
-      "QwenImageEditInpaintPipeline.__call__ uses init_mask to blend denoised results after each denoising step with the formula: (1 - init_mask) * init_latents_proper + init_mask * latents",
-      "The blending formula preserves unmasked regions from init_latents_proper while allowing masked regions (where init_mask=1) to use the generated latents",
-      "Before the next denoising step (if not at final timestep), init_latents_proper is re-noised using scheduler.scale_noise to match the next timestep's noise level",
-      "This blending mechanism is implemented in src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_inpaint.py"
+      "In kernel_ssm_conv, each work-item derives (channel, token, seq) indices from its global index",
+      "The input window pointer `s` is computed as seq*src_stride_seq + channel*src_stride_inner + token",
+      "The convolution weights pointer `c` is computed as channel*d_conv",
+      "The dot-product is computed by looping over d_conv elements using s[i0]*c[i0]",
+      "The result is written to dst_data at a flattened index computed from (seq, token, channel) and destination strides"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -590,7 +603,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_inpaint.py"
+        "ggml/src/ggml-sycl/ssm_conv.cpp"
       ],
       "is_core_question": true
     },
@@ -599,31 +612,27 @@
   },
   {
     "index": 21,
-    "id": "52aead1d-941b-40e4-9263-e70602e9adb5",
+    "id": "6ce7f2ba-58f1-4ff3-b9c7-35a15a1647a1",
     "repo": "prs/raw",
-    "commit": "865ba102b397b6f761423705142cbf9078d7b6d7",
-    "pr": 12223,
-    "question": "In what scenarios does the QwenImage pipeline enable classifier-free guidance during inference, and what warnings are issued when the configuration is inconsistent?",
-    "ground_truth_answer": "In QwenImagePipeline.__call__ (e.g., src/diffusers/pipelines/qwenimage/pipeline_qwenimage.py), classifier-free guidance is enabled when `do_true_cfg = true_cfg_scale > 1 and has_neg_prompt` is True. Two warnings are issued for inconsistent configurations: (1) if `true_cfg_scale > 1` but no `negative_prompt` is provided, it warns that CFG is not enabled despite the scale being set; (2) if `negative_prompt` is provided but `true_cfg_scale <= 1`, it warns that CFG is not enabled despite having a negative prompt.",
+    "commit": "280d97be9660e7a5feaa28a6e7a299bc73dd83fc",
+    "pr": 16792,
+    "question": "When resolving a JSON schema reference that points to an array element, how does the schema converter determine which array index to access?",
+    "ground_truth_answer": "In SchemaConverter (common/json-schema-to-grammar.cpp, examples/json_schema_to_grammar.py, and tools/server/public_legacy/json-schema-to-grammar.mjs), when the target is an array, the selector string is parsed as an integer index. If parsing fails or the index is out of bounds, an error is raised. Otherwise, the element at that numeric index is accessed from the array.",
     "facts": [
-      "In QwenImagePipeline.__call__, classifier-free guidance is enabled when `do_true_cfg = true_cfg_scale > 1 and has_neg_prompt` evaluates to True",
-      "A warning is issued if `true_cfg_scale > 1` but no `negative_prompt` is provided, indicating CFG is not enabled despite the scale being set",
-      "A warning is issued if `negative_prompt` is provided but `true_cfg_scale <= 1`, indicating CFG is not enabled despite having a negative prompt",
-      "The CFG enabling logic and warnings are implemented in QwenImagePipeline.__call__ in src/diffusers/pipelines/qwenimage/pipeline_qwenimage.py",
-      "Similar CFG configuration handling exists across related pipeline variants including pipeline_qwenimage_controlnet.py, pipeline_qwenimage_edit.py, pipeline_qwenimage_img2img.py, and pipeline_qwenimage_inpaint.py"
+      "SchemaConverter parses the selector string as an integer index when the reference target is an array",
+      "If parsing the selector as an integer fails or the index is out of bounds, SchemaConverter raises an error",
+      "When the index is valid, SchemaConverter accesses the array element at that numeric index position"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 5,
+      "n_context_files": 3,
       "key_files": [
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage.py",
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_controlnet.py",
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit.py",
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_img2img.py",
-        "src/diffusers/pipelines/qwenimage/pipeline_qwenimage_inpaint.py"
+        "common/json-schema-to-grammar.cpp",
+        "examples/json_schema_to_grammar.py",
+        "tools/server/public_legacy/json-schema-to-grammar.mjs"
       ],
       "is_core_question": true
     },
@@ -632,29 +641,28 @@
   },
   {
     "index": 22,
-    "id": "7b2c993b-3f30-41ea-b535-396bfa8473ca",
+    "id": "dee46096-5b55-4066-bca2-ceb3ace053a9",
     "repo": "prs/raw",
-    "commit": "f50b18eec7d646bf98aef576dbb0f47ff512beaa",
-    "pr": 12220,
-    "question": "How does the QwenImage pipeline handle both image\u2010to\u2010image and inpainting tasks using a single modular pipeline structure, and what mechanism determines which processing blocks are activated for each task?",
-    "ground_truth_answer": "In QwenImageAutoBlocks (src/diffusers/modular_pipelines/qwenimage/modular_blocks.py), an AutoPipelineBlocks pattern routes to different encoder/input/denoise blocks based on which conditional inputs are provided. Specifically, QwenImageAutoVaeEncoderStep checks for `mask_image` to activate QwenImageInpaintVaeEncoderStep, or `image` to activate QwenImageImg2ImgVaeEncoderStep. Similarly, QwenImageAutoInputStep routes to QwenImageInpaintInputStep when `processed_mask_image` is present, or QwenImageImg2ImgInputStep when `image_latents` is present but not the mask. This trigger\u2010based routing using the `block_trigger_inputs` attribute allows the same pipeline to handle multiple tasks without requiring separate pipeline classes.",
+    "commit": "2f68ce7cfd20e9e7098514bf730e5389b7bba908",
+    "pr": 16784,
+    "question": "How does the chat streaming mechanism ensure that server properties are refreshed exactly once when inference begins, and what fallback behavior occurs if that refresh fails while cached data exists?",
+    "ground_truth_answer": "In ChatStore.sendChatCompletion (tools/server/webui/src/lib/stores/chat.svelte.ts), the onFirstValidChunk callback triggers refreshServerPropsOnce(), which sets a serverPropsRefreshed flag to prevent duplicate fetches. This calls serverStore.fetchServerProps with silent: true if props already exist. In ServerStore.handleFetchServerPropsError (tools/server/webui/src/lib/stores/server.svelte.ts), when a silent refresh fails and hadProps is true, the error is logged but cached _serverProps remain unchanged, preserving the existing model metadata.",
     "facts": [
-      "QwenImageAutoBlocks uses an AutoPipelineBlocks pattern that routes to different encoder/input/denoise blocks based on which conditional inputs are provided",
-      "QwenImageAutoVaeEncoderStep checks for `mask_image` to activate QwenImageInpaintVaeEncoderStep, or `image` to activate QwenImageImg2ImgVaeEncoderStep",
-      "QwenImageAutoInputStep routes to QwenImageInpaintInputStep when `processed_mask_image` is present, or QwenImageImg2ImgInputStep when `image_latents` is present but not the mask",
-      "The trigger-based routing mechanism uses the `block_trigger_inputs` attribute to determine which processing blocks to activate",
-      "This routing mechanism allows a single pipeline to handle both image-to-image and inpainting tasks without requiring separate pipeline classes"
+      "ChatStore.sendChatCompletion uses an onFirstValidChunk callback that triggers refreshServerPropsOnce() when streaming begins",
+      "refreshServerPropsOnce() sets a serverPropsRefreshed flag to prevent duplicate fetches of server properties",
+      "refreshServerPropsOnce() calls serverStore.fetchServerProps with silent: true if properties already exist",
+      "ServerStore.handleFetchServerPropsError logs errors from silent refreshes when hadProps is true but leaves cached _serverProps unchanged",
+      "When a silent refresh fails with existing cached data, the cached model metadata is preserved for continued use"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
-      "scope": "broad",
+      "scope": "deep",
       "includes_code": false,
-      "n_context_files": 3,
+      "n_context_files": 2,
       "key_files": [
-        "src/diffusers/modular_pipelines/qwenimage/modular_blocks.py",
-        "src/diffusers/modular_pipelines/qwenimage/encoders.py",
-        "src/diffusers/modular_pipelines/qwenimage/inputs.py"
+        "tools/server/webui/src/lib/stores/chat.svelte.ts",
+        "tools/server/webui/src/lib/stores/server.svelte.ts"
       ],
       "is_core_question": true
     },
@@ -663,17 +671,17 @@
   },
   {
     "index": 23,
-    "id": "2b87652a-8524-40cd-9dbc-0a456209cc67",
+    "id": "31eb11a7-150d-4c59-bb6b-0bf50ad324be",
     "repo": "prs/raw",
-    "commit": "561ab54de3d3aaa9007e76aeb3b15e8be3ed353f",
-    "pr": 12215,
-    "question": "How does the controlnet conditioning get injected into the latent space during the forward pass?",
-    "ground_truth_answer": "In QwenImageControlNetModel.forward (src/diffusers/models/controlnets/controlnet_qwenimage.py), the controlnet_cond is first passed through controlnet_x_embedder to get control embeddings, which are then added directly to the hidden_states after img_in processing: `hidden_states = hidden_states + self.controlnet_x_embedder(controlnet_cond)`. This modified hidden_states then flows through the transformer blocks, and each block's output is passed through corresponding controlnet_blocks to produce controlnet_block_samples that are scaled and returned.",
+    "commit": "d38d9f0877a5872daa3c5f06fb9a86376bf15d50",
+    "pr": 16774,
+    "question": "How does the backend scoring system determine which s390x CPU variant to load when dynamic backend selection is enabled?",
+    "ground_truth_answer": "In ggml_backend_cpu_s390x_score (ggml/src/ggml-cpu/arch/s390/cpu-feats.cpp), the function queries hardware capabilities via getauxval(AT_HWCAP) to detect VXE2 and NNPA support. It starts with a base score of 1, then adds weighted increments (1 << 1 for VXE2, 1 << 2 for NNPA) if the corresponding feature is both compiled in (GGML_USE_VXE2 or GGML_USE_NNPA) and available at runtime. If a required feature is missing, it returns 0 to disqualify that variant. The variant with the highest score is selected by the dynamic backend loader.",
     "facts": [
-      "In QwenImageControlNetModel.forward, controlnet_cond is passed through controlnet_x_embedder to generate control embeddings",
-      "The control embeddings are added directly to hidden_states after img_in processing using the operation: hidden_states = hidden_states + self.controlnet_x_embedder(controlnet_cond)",
-      "The modified hidden_states flows through transformer blocks, and each block's output is passed through corresponding controlnet_blocks",
-      "The controlnet_blocks produce controlnet_block_samples that are scaled and returned as the conditioning output"
+      "ggml_backend_cpu_s390x_score in ggml/src/ggml-cpu/arch/s390/cpu-feats.cpp queries hardware capabilities via getauxval(AT_HWCAP) to detect VXE2 and NNPA support",
+      "The scoring system starts with a base score of 1 and adds weighted increments: 1 << 1 for VXE2 and 1 << 2 for NNPA when both compiled in (GGML_USE_VXE2 or GGML_USE_NNPA) and available at runtime",
+      "If a required feature is missing at runtime, the function returns 0 to disqualify that variant",
+      "The dynamic backend loader selects the s390x CPU variant with the highest score"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -682,8 +690,8 @@
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/diffusers/models/controlnets/controlnet_qwenimage.py",
-        "src/diffusers/models/transformers/transformer_qwenimage.py"
+        "ggml/src/ggml-cpu/arch/s390/cpu-feats.cpp",
+        "ggml/src/CMakeLists.txt"
       ],
       "is_core_question": true
     },
@@ -692,46 +700,48 @@
   },
   {
     "index": 24,
-    "id": "0d57f455-f2ae-48d5-bcf3-94a2422d57e8",
+    "id": "5db759b5-949c-42e8-bfd8-4f4fa0312b00",
     "repo": "prs/raw",
-    "commit": "0fd7ee79ea54304a9e04921e5c8c841e1765de73",
-    "pr": 12209,
-    "question": "How does the codebase handle setting a custom attention backend for the transformer model when NPU flash attention is requested?",
-    "ground_truth_answer": "In the training scripts (e.g., train_dreambooth_flux.py, train_dreambooth_lora_flux.py), when the enable_npu_flash_attention flag is set, the code first checks if torch_npu is available using is_torch_npu_available(). If available, it calls transformer.set_attention_backend(\"_native_npu\") to configure the attention backend. This replaces the previous approach in transformer_flux.py where FluxAttnProcessor2_0_NPU was set as the default processor during initialization.",
+    "commit": "b9ce94017729465895402cbcfffb51fa926c15e3",
+    "pr": 16769,
+    "question": "In the fused ROPE operation, how does the implementation determine the destination address when writing to memory via the set_rows path versus the normal output path?",
+    "ground_truth_answer": "In rope_norm.comp and rope_neox.comp, the destination address calculation checks if `p.set_rows_stride != 0`. When set (indicating fusion with VIEW+SET_ROWS), it computes `idst = row_x*ne0 + i0/2` (or `i0` for norm), then adds an offset based on the row index from `data_i[channel_x].x * p.set_rows_stride`, which maps the rope output through the view transformation to the correct position in the set_rows destination tensor. Without fusion, it uses the standard `idst = row_dst*ne0 + i0/2`.",
     "facts": [
-      "When enable_npu_flash_attention flag is set in training scripts (train_dreambooth_flux.py, train_dreambooth_lora_flux.py), the code checks if torch_npu is available using is_torch_npu_available()",
-      "If torch_npu is available, the code calls transformer.set_attention_backend(\"_native_npu\") to configure the attention backend",
-      "This set_attention_backend() approach replaces the previous method where FluxAttnProcessor2_0_NPU was set as the default processor during initialization in transformer_flux.py"
+      "The destination address calculation in rope_norm.comp and rope_neox.comp checks if `p.set_rows_stride != 0` to determine which path to use",
+      "When `p.set_rows_stride != 0` (indicating fusion with VIEW+SET_ROWS), the destination address is computed as `idst = row_x*ne0 + i0/2` (or `i0` for norm) plus an offset based on `data_i[channel_x].x * p.set_rows_stride`",
+      "The set_rows path offset maps the rope output through the view transformation to the correct position in the set_rows destination tensor",
+      "Without fusion (when `p.set_rows_stride == 0`), the implementation uses the standard destination address calculation `idst = row_dst*ne0 + i0/2`"
     ],
     "metadata": {
-      "difficulty": "hard",
+      "difficulty": "moderate",
       "type": "open_question",
-      "scope": "broad",
+      "scope": "deep",
       "includes_code": false,
       "n_context_files": 3,
       "key_files": [
-        "examples/dreambooth/train_dreambooth_flux.py",
-        "examples/dreambooth/train_dreambooth_lora_flux.py",
-        "src/diffusers/models/transformers/transformer_flux.py"
+        "ggml/src/ggml-vulkan/vulkan-shaders/rope_norm.comp",
+        "ggml/src/ggml-vulkan/vulkan-shaders/rope_neox.comp",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp"
       ],
-      "is_core_question": true
+      "is_core_question": false
     },
     "status": "pending",
     "deepwiki_answer": null
   },
   {
     "index": 25,
-    "id": "4d0d66dd-2a27-4839-9568-94b8a93cb861",
+    "id": "6a2b12cb-bc1d-49bd-b8cc-d072e49f9c15",
     "repo": "prs/raw",
-    "commit": "900cf9d33bc091f3e47f8e598cba464f8b93bdd7",
-    "pr": 41997,
-    "question": "How does the image processor initialization handle kwargs passed through the from_dict method, and which kwargs are filtered before instantiation?",
-    "ground_truth_answer": "In BaseImageProcessor.from_dict (src/transformers/image_processing_base.py), the method first updates image_processor_dict with only those kwargs that exist in cls.valid_kwargs.__annotations__, then instantiates the image processor with the updated dict. After instantiation, any remaining kwargs that match existing image processor attributes are removed from the kwargs dict without setting them again, since they were already passed during initialization.",
+    "commit": "c55d53acec864f64afa1ba92972203dce1bf88f5",
+    "pr": 16764,
+    "question": "How does the image token arrangement differ between the standard Pixtral implementation and the newly added OCR model variant when processing vision embeddings?",
+    "ground_truth_answer": "In clip.cpp, the image break token arrangement is now conditional based on whether `model.token_embd_img_break` exists. For Pixtral, break tokens are inserted at the end of each row of patches. The new OCR variant (PROJECTOR_TYPE_LIGHTONOCR) shares the same graph building code but skips break token insertion entirely by setting `use_break_tok = False` in LightOnOCRVisionModel, resulting in `n_patches = n_patches_y * n_patches_x` without the additional `+ n_patches_y - 1` break tokens.",
     "facts": [
-      "BaseImageProcessor.from_dict updates image_processor_dict with kwargs that exist in cls.valid_kwargs.__annotations__",
-      "The image processor is instantiated with the updated image_processor_dict",
-      "After instantiation, remaining kwargs that match existing image processor attributes are removed from the kwargs dict",
-      "Removed kwargs are not set again because they were already passed during initialization"
+      "In clip.cpp, image break token arrangement is conditional based on the existence of model.token_embd_img_break",
+      "For Pixtral, break tokens are inserted at the end of each row of patches",
+      "The OCR variant (PROJECTOR_TYPE_LIGHTONOCR) sets use_break_tok = False in LightOnOCRVisionModel to skip break token insertion",
+      "With break tokens enabled, n_patches = n_patches_y * n_patches_x + n_patches_y - 1",
+      "Without break tokens (OCR variant), n_patches = n_patches_y * n_patches_x"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -740,8 +750,8 @@
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/transformers/image_processing_base.py",
-        "src/transformers/image_processing_utils_fast.py"
+        "tools/mtmd/clip.cpp",
+        "convert_hf_to_gguf.py"
       ],
       "is_core_question": true
     },
@@ -750,27 +760,26 @@
   },
   {
     "index": 26,
-    "id": "2db53603-2d5e-4c44-a8d3-4cd1c04399c2",
+    "id": "d485edd0-7978-43be-bf99-311aaa46fea7",
     "repo": "prs/raw",
-    "commit": "b9f90dc388fd415a2ba2a6a31a372f451d4a4eed",
-    "pr": 41969,
-    "question": "How does the convolution bias configuration from the encoder settings propagate into the individual convolutional layers of the conformer's convolution module?",
-    "ground_truth_answer": "In ParakeetConformerConvolutionModule.__init__ (src/transformers/models/parakeet/modeling_parakeet.py), the config.convolution_bias attribute is passed as the bias parameter to all three Conv1d layers: pointwise_conv1, depthwise_conv, and pointwise_conv2. The same pattern applies in FastSpeech2ConformerConvolutionModule.__init__ (src/transformers/models/fastspeech2_conformer/modeling_fastspeech2_conformer.py).",
+    "commit": "c053e18a66dd95dc340aa61317877c2a41d4e3cf",
+    "pr": 16763,
+    "question": "How does the LFM2 chat template handler decide whether to apply JSON schema grammar constraints to tool call outputs?",
+    "ground_truth_answer": "In common_chat_params_init_lfm2 (common/chat.cpp), the handler checks if tools are provided and calls replace_json_schema_marker on the tweaked messages. This function searches the system message for case-insensitive occurrences of \"force json schema.\" or \"force json schema.\\n\". If found, it removes the marker and returns true, triggering the creation of a grammar from the tools' JSON schemas using build_grammar. Without this marker, tool calls are rendered without grammar constraints, producing Python-like code instead of strict JSON.",
     "facts": [
-      "In ParakeetConformerConvolutionModule.__init__, the config.convolution_bias attribute is passed as the bias parameter to three Conv1d layers: pointwise_conv1, depthwise_conv, and pointwise_conv2",
-      "In FastSpeech2ConformerConvolutionModule.__init__, the config.convolution_bias attribute is similarly passed as the bias parameter to the Conv1d layers",
-      "The convolution_bias configuration value from the encoder settings directly controls whether bias terms are used in all convolutional layers of the conformer's convolution module"
+      "The common_chat_params_init_lfm2 function in common/chat.cpp checks if tools are provided and calls replace_json_schema_marker on the tweaked messages",
+      "The replace_json_schema_marker function searches the system message for case-insensitive occurrences of 'force json schema.' or 'force json schema.\\n'",
+      "If the marker is found, replace_json_schema_marker removes it and returns true, which triggers grammar creation from the tools' JSON schemas using build_grammar",
+      "Without the marker, tool calls are rendered without grammar constraints and produce Python-like code instead of strict JSON"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 3,
+      "n_context_files": 1,
       "key_files": [
-        "src/transformers/models/parakeet/modeling_parakeet.py",
-        "src/transformers/models/parakeet/configuration_parakeet.py",
-        "src/transformers/models/fastspeech2_conformer/modeling_fastspeech2_conformer.py"
+        "common/chat.cpp"
       ],
       "is_core_question": true
     },
@@ -779,27 +788,29 @@
   },
   {
     "index": 27,
-    "id": "258d036c-9d9b-41bc-beca-39e783e16087",
+    "id": "0ed40b0a-9bce-47d9-94b9-c52aad88e023",
     "repo": "prs/raw",
-    "commit": "fd36275be2f3e56bc20da01f1f320b623b413957",
-    "pr": 41930,
-    "question": "How does the vision transformer class enable recording of hidden states and attention outputs during forward passes?",
-    "ground_truth_answer": "The SiglipVisionTransformer and Siglip2VisionTransformer classes define a _can_record_outputs dictionary mapping output types to their corresponding layer classes (e.g., 'hidden_states' maps to SiglipEncoderLayer/Siglip2EncoderLayer, 'attentions' maps to SiglipAttention/Siglip2Attention). The forward method is decorated with @check_model_inputs(tie_last_hidden_states=False), which uses this mapping to capture outputs from the appropriate layer instances during execution.",
+    "commit": "7a0e900e3615fa46c074a7fdf900b47d3c0a1c7e",
+    "pr": 16746,
+    "question": "How is the ordering of buffer type contexts now enforced when allocating tensors for the cache, and what structural change accompanies this ordering guarantee?",
+    "ground_truth_answer": "In both llama_kv_cache and llama_memory_recurrent constructors (src/llama-kv-cache.cpp and src/llama-memory-recurrent.cpp), a custom comparator struct is defined that uses strcmp on buffer type names to enforce lexicographic ordering. The ctx_map now stores ggml_context_ptr with this comparator, and instead of separate ctxs and bufs vectors, a single ctxs_bufs vector of pairs is used, ensuring the order of contexts matches the order of their allocated buffers throughout the allocation process.",
     "facts": [
-      "SiglipVisionTransformer and Siglip2VisionTransformer classes define a _can_record_outputs dictionary that maps output types to their corresponding layer classes",
-      "The _can_record_outputs dictionary maps 'hidden_states' to SiglipEncoderLayer/Siglip2EncoderLayer and 'attentions' to SiglipAttention/Siglip2Attention",
-      "The forward method is decorated with @check_model_inputs(tie_last_hidden_states=False)",
-      "The @check_model_inputs decorator uses the _can_record_outputs mapping to capture outputs from the appropriate layer instances during execution"
+      "A custom comparator struct is defined in both llama_kv_cache and llama_memory_recurrent constructors that uses strcmp on buffer type names to enforce lexicographic ordering",
+      "The ctx_map now stores ggml_context_ptr with this custom comparator to maintain ordered contexts",
+      "Instead of separate ctxs and bufs vectors, a single ctxs_bufs vector of pairs is used",
+      "The ctxs_bufs vector structure ensures the order of contexts matches the order of their allocated buffers throughout the allocation process"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 4,
       "key_files": [
-        "src/transformers/models/siglip/modeling_siglip.py",
-        "src/transformers/models/siglip2/modeling_siglip2.py"
+        "src/llama-kv-cache.cpp",
+        "src/llama-memory-recurrent.cpp",
+        "src/llama-kv-cache.h",
+        "src/llama-memory-recurrent.h"
       ],
       "is_core_question": true
     },
@@ -808,25 +819,26 @@
   },
   {
     "index": 28,
-    "id": "f3fe69aa-948e-4d18-9fab-67648f3a3439",
+    "id": "cd76ace1-2651-42bc-b3f0-89e9e5063fa3",
     "repo": "prs/raw",
-    "commit": "8fb854cac869b42c87a7bd15d9298985c5aea96e",
-    "pr": 41914,
-    "question": "How does the workflow determine the base commit to compare against when checking for new test failures in a pull request scenario versus a scheduled run?",
-    "ground_truth_answer": "In check_failed_tests.yml, when `pr_number` is provided (pull request scenario), it fetches the PR info via GitHub API and extracts the first parent of the merge commit as `END_SHA` using `merge_commit.parents[0].sha`. For scheduled runs (when `pr_number` is empty), it calls `get_last_daily_ci_run_commit` to find the commit from the previous workflow run of the same type, setting that as `END_SHA`.",
+    "commit": "cd5e3b57541ecc52421130742f4d89acbcf77cd4",
+    "pr": 16736,
+    "question": "When unified KV cache is enabled, how does the system calculate the per-sequence context size differently from the non-unified case?",
+    "ground_truth_answer": "In llama_context::llama_context (src/llama-context.cpp), when cparams.kv_unified is true, n_ctx_seq is set equal to the full n_ctx. In the non-unified case, n_ctx_seq is computed as n_ctx divided by n_seq_max, effectively partitioning the context among sequences.",
     "facts": [
-      "In check_failed_tests.yml, when pr_number is provided (pull request scenario), the workflow fetches PR info via GitHub API and extracts END_SHA using merge_commit.parents[0].sha",
-      "The merge_commit.parents[0].sha represents the first parent of the merge commit in pull request scenarios",
-      "For scheduled runs when pr_number is empty, the workflow calls get_last_daily_ci_run_commit to find the commit from the previous workflow run of the same type and sets it as END_SHA"
+      "In llama_context::llama_context (src/llama-context.cpp), when cparams.kv_unified is true, n_ctx_seq is set equal to the full n_ctx",
+      "In the non-unified case, n_ctx_seq is computed as n_ctx divided by n_seq_max",
+      "The non-unified case effectively partitions the context among sequences by dividing n_ctx by n_seq_max"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 2,
       "key_files": [
-        ".github/workflows/check_failed_tests.yml"
+        "src/llama-context.cpp",
+        "src/llama-cparams.h"
       ],
       "is_core_question": true
     },
@@ -835,25 +847,30 @@
   },
   {
     "index": 29,
-    "id": "e9981c54-095f-4e2b-b09f-cd72afda2fea",
+    "id": "360525c1-b718-404f-a1de-0059541c5fa0",
     "repo": "prs/raw",
-    "commit": "020e713ac8e70bd2e72bcd12dc6bd1ada6162562",
-    "pr": 41897,
-    "question": "How does the validation logic in the configuration class ensure compatibility between forward and backward data type selections?",
-    "ground_truth_answer": "In FPQuantConfig.post_init (src/transformers/utils/quantization_config.py), the method first validates that backward_dtype is one of 'bf16', 'mxfp8', or 'mxfp4'. Then it enforces a constraint that if backward_dtype is not 'bf16', the forward_dtype must be 'mxfp4', raising a ValueError otherwise to prevent unsupported forward-backward dtype combinations.",
+    "commit": "f77c13b91f4d25754b6a0b857f98a6bc922a0aa7",
+    "pr": 16715,
+    "question": "When fusing GEMV operations with GLU activation in the CUDA backend, what conditions must be met for the gate and up projections to be eligible for fusion?",
+    "ground_truth_answer": "In ggml_cuda_should_fuse_mul_mat (ggml-cuda.cu), both projections must: (1) operate on the same input tensor (src[0] must match and be contiguous), (2) use the same weight matrix (src[1] must be identical), (3) have matching expert IDs for MoE models (src[2] must match if present), (4) use supported GLU operations (SWIGLU, GEGLU, or SWIGLU_OAI), and (5) not use split buffers. Additionally, if bias tensors are present, they must follow the correct operation pattern (ADD/ADD_ID) and reference the corresponding mul_mat operations correctly.",
     "facts": [
-      "FPQuantConfig.post_init in src/transformers/utils/quantization_config.py validates that backward_dtype must be one of 'bf16', 'mxfp8', or 'mxfp4'",
-      "When backward_dtype is not 'bf16', FPQuantConfig.post_init enforces that forward_dtype must be 'mxfp4'",
-      "FPQuantConfig.post_init raises a ValueError if the forward-backward dtype combination is unsupported"
+      "In ggml_cuda_should_fuse_mul_mat (ggml-cuda.cu), both gate and up projections must operate on the same input tensor, with src[0] matching and being contiguous",
+      "Both projections must use the same weight matrix (src[1] must be identical)",
+      "For MoE models, expert IDs must match (src[2] must match if present)",
+      "Only SWIGLU, GEGLU, or SWIGLU_OAI GLU operations are supported for fusion",
+      "Split buffers must not be used for the projections to be eligible for fusion",
+      "If bias tensors are present, they must follow the correct operation pattern (ADD/ADD_ID) and reference the corresponding mul_mat operations correctly"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 3,
       "key_files": [
-        "src/transformers/utils/quantization_config.py"
+        "ggml/src/ggml-cuda/ggml-cuda.cu",
+        "ggml/src/ggml-cuda/mmvf.cu",
+        "ggml/src/ggml-cuda/mmvq.cu"
       ],
       "is_core_question": true
     },
@@ -862,26 +879,27 @@
   },
   {
     "index": 30,
-    "id": "39ac37d1-6f0c-429d-9cf9-ee34fd7ee035",
+    "id": "7c98cd0f-96fc-4fb7-908e-7d1e05765f94",
     "repo": "prs/raw",
-    "commit": "fa22b569038540d31eacbf5d333a1e9aa0787131",
-    "pr": 41818,
-    "question": "Why must encoder_hidden_states be passed as a positional argument rather than a keyword argument when invoking the block's forward method in models using gradient checkpointing?",
-    "ground_truth_answer": "In GPTBigCodeBlock.forward (src/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py), encoder_hidden_states is passed as a positional argument so that torch.utils.checkpoint.checkpoint receives it as a positional argument and computes gradients for it. If it were passed as a keyword argument, GradientCheckpointingLayer would filter it out, preventing gradient computation. Meanwhile, layer_past is passed as a keyword argument specifically so GradientCheckpointingLayer can filter it (since use_reentrant=False would fail otherwise).",
+    "commit": "10640e31aab0819f31c1e1f2d008b019ee737232",
+    "pr": 16700,
+    "question": "How do the CPU, CUDA, and OpenCL upscale implementations compute the scale factors when align-corners mode is enabled and either spatial dimension equals 1?",
+    "ground_truth_answer": "In ggml_compute_forward_upscale_f32 (ggml/src/ggml-cpu/ops.cpp), ggml_cuda_op_upscale (ggml/src/ggml-cuda/upscale.cu), and ggml_cl_upscale (ggml/src/ggml-opencl/ggml-opencl.cpp), when align-corners is enabled, the scale factors sf0 and sf1 are computed using a conditional check: if both the destination dimension and source dimension are greater than 1, the scale factor is (ne_dst - 1) / (ne_src - 1); otherwise, the original scale factor (destination / source) is retained to avoid division by zero.",
     "facts": [
-      "In GPTBigCodeBlock.forward, encoder_hidden_states is passed as a positional argument to torch.utils.checkpoint.checkpoint so gradients can be computed for it",
-      "If encoder_hidden_states were passed as a keyword argument, GradientCheckpointingLayer would filter it out and prevent gradient computation",
-      "layer_past is deliberately passed as a keyword argument so GradientCheckpointingLayer can filter it out, avoiding failures with use_reentrant=False",
-      "The distinction between positional and keyword arguments controls whether GradientCheckpointingLayer includes or excludes parameters from gradient checkpointing"
+      "In ggml_compute_forward_upscale_f32 (ggml/src/ggml-cpu/ops.cpp), ggml_cuda_op_upscale (ggml/src/ggml-cuda/upscale.cu), and ggml_cl_upscale (ggml/src/ggml-opencl/ggml-opencl.cpp), when align-corners is enabled, scale factors sf0 and sf1 are computed using a conditional check on both destination and source dimensions",
+      "If both the destination dimension (ne_dst) and source dimension (ne_src) are greater than 1, the scale factor is computed as (ne_dst - 1) / (ne_src - 1)",
+      "If either dimension equals 1, the original scale factor (destination / source) is retained to avoid division by zero"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 3,
       "key_files": [
-        "src/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py"
+        "ggml/src/ggml-cpu/ops.cpp",
+        "ggml/src/ggml-cuda/upscale.cu",
+        "ggml/src/ggml-opencl/ggml-opencl.cpp"
       ],
       "is_core_question": true
     },
@@ -890,17 +908,17 @@
   },
   {
     "index": 31,
-    "id": "3c180147-5238-4519-874d-a550147f1a28",
+    "id": "339448c2-3dbc-4279-a256-820f19df730d",
     "repo": "prs/raw",
-    "commit": "325810e7fccf8273599c58a525ae0011ea8ba3e6",
-    "pr": 41817,
-    "question": "How does the fast image processor avoid resizing images that are already smaller than the target dimensions?",
-    "ground_truth_answer": "In FuyuImageProcessorFast.resize (src/transformers/models/fuyu/image_processing_fuyu_fast.py), the method first checks if both image_width <= target_width and image_height <= target_height. If this condition is true, it returns the original image without any transformation. Only when at least one dimension exceeds the target size does it calculate an optimal scale factor (the minimum of height_scale_factor and width_scale_factor) and resize to new_height and new_width.",
+    "commit": "2b9bd9bf4e759c05db629ec1c391dc8aeaa71887",
+    "pr": 16665,
+    "question": "How does the ROLL operation handle tensor element indexing when computing the source position for each destination element?",
+    "ground_truth_answer": "In kernel_roll_fused_i0_i1 (ggml/src/ggml-sycl/roll.cpp), the function first computes the destination index using the loop indices (i0, i1, i2, i3) with standard strides. Then it applies wrap_add to each dimension index with the normalized shift values (shNe0-3) to compute the wrapped source indices (s0, s1, s2, s3). The wrap_add function performs modular arithmetic: (i + shift) mod n, using a conditional to avoid negative results. Finally, these wrapped indices are combined with strides to compute idx_src, which is used to fetch src_d[idx_src] into dst_d[idx_dst].",
     "facts": [
-      "FuyuImageProcessorFast.resize() first checks if both image_width <= target_width and image_height <= target_height",
-      "If both dimensions are smaller than or equal to target dimensions, the method returns the original image without any transformation",
-      "Only when at least one dimension exceeds the target size does the method calculate an optimal scale factor (minimum of height_scale_factor and width_scale_factor)",
-      "The image is resized to new_height and new_width only when dimensions exceed target size"
+      "kernel_roll_fused_i0_i1 in ggml/src/ggml-sycl/roll.cpp computes the destination index using loop indices (i0, i1, i2, i3) with standard strides",
+      "The function applies wrap_add to each dimension index with normalized shift values (shNe0-3) to compute wrapped source indices (s0, s1, s2, s3)",
+      "wrap_add performs modular arithmetic: (i + shift) mod n, using a conditional to avoid negative results",
+      "The wrapped indices are combined with strides to compute idx_src, which is used to fetch src_d[idx_src] into dst_d[idx_dst]"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -909,7 +927,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/transformers/models/fuyu/image_processing_fuyu_fast.py"
+        "ggml/src/ggml-sycl/roll.cpp"
       ],
       "is_core_question": true
     },
@@ -918,30 +936,28 @@
   },
   {
     "index": 32,
-    "id": "0685662a-9a37-49ec-b83a-d7b2c02d9887",
+    "id": "dd18f6df-0e7f-41b5-bd77-45d07f23d92f",
     "repo": "prs/raw",
-    "commit": "87be5595081364ef99393feeaa60d71db3652679",
-    "pr": 41790,
-    "question": "How does the decoder layer selection mechanism determine which attention mask type to apply during the forward pass in hybrid attention-state-space models?",
-    "ground_truth_answer": "In the forward methods of Lfm2Model and Lfm2MoeModel (found in modeling_lfm2.py and modeling_lfm2_moe.py), a conditional assignment creates `linear_attention` by checking if the input sequence length is 1 (decoding stage) versus multiple tokens (prefill stage). Then, for each decoder layer iteration, `layer_mask` is assigned either the causal 4D mask (if `decoder_layer.is_attention_layer` is True) or the 2D `linear_attention` mask otherwise. This ensures mamba/state-space layers receive proper 2D masking during prefill while attention layers get the causal mask.",
+    "commit": "03792ad93609fc67e41041c6347d9aa14e5e0d74",
+    "pr": 16649,
+    "question": "How does the top-k mixture-of-experts kernel handle the two different softmax strategies\u2014applying it before versus after expert selection?",
+    "ground_truth_answer": "The kernel uses a `delayed_softmax` template parameter and runtime flag. When false (default), it calls `softmax_warp_inplace` on the raw logits before selecting top-k experts via argmax reduction. When true, it skips the initial softmax, performs argmax reduction on raw logits, then calls `softmax_warp_inplace` on only the selected expert weights (limited to `n_expert_used`). This is implemented in `topk_moe_cuda` in topk-moe.cu, where the softmax location is controlled by conditional compilation based on the template parameter.",
     "facts": [
-      "In Lfm2Model and Lfm2MoeModel forward methods, a conditional assignment creates `linear_attention` by checking if input sequence length is 1 (decoding stage) versus multiple tokens (prefill stage)",
-      "For each decoder layer iteration, `layer_mask` is conditionally assigned based on `decoder_layer.is_attention_layer` boolean attribute",
-      "When `decoder_layer.is_attention_layer` is True, `layer_mask` receives the causal 4D mask",
-      "When `decoder_layer.is_attention_layer` is False, `layer_mask` receives the 2D `linear_attention` mask",
-      "This mechanism ensures mamba/state-space layers receive 2D masking during prefill while attention layers receive causal masking"
+      "The kernel uses a `delayed_softmax` template parameter and runtime flag to control softmax timing",
+      "When `delayed_softmax` is false (default), `softmax_warp_inplace` is called on raw logits before top-k expert selection via argmax reduction",
+      "When `delayed_softmax` is true, argmax reduction is performed on raw logits first, then `softmax_warp_inplace` is called only on the selected expert weights limited to `n_expert_used`",
+      "This mechanism is implemented in the `topk_moe_cuda` function in topk-moe.cu",
+      "The softmax location is controlled by conditional compilation based on the template parameter"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 4,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/lfm2/modeling_lfm2.py",
-        "src/transformers/models/lfm2/modular_lfm2.py",
-        "src/transformers/models/lfm2_moe/modeling_lfm2_moe.py",
-        "src/transformers/models/lfm2_moe/modular_lfm2_moe.py"
+        "ggml/src/ggml-cuda/topk-moe.cu",
+        "ggml/src/ggml-cuda/topk-moe.cuh"
       ],
       "is_core_question": true
     },
@@ -950,27 +966,27 @@
   },
   {
     "index": 33,
-    "id": "4c09ff1a-f8bd-4b99-bae4-86c193d907d6",
+    "id": "01a7ad9a-3837-4b9a-b4d0-61462918fbae",
     "repo": "prs/raw",
-    "commit": "85c50557b97590538229f99a321ea88d03d6eaa7",
-    "pr": 41778,
-    "question": "What validation pattern is used across the Qwen3-Omni model family to ensure RoPE configuration consistency, and which keys are excluded from this validation?",
-    "ground_truth_answer": "The `rope_config_validation` function is invoked in both `Qwen3OmniMoeConfig` and `Qwen3OmniMoeThinkerConfig` constructors (in configuration_qwen3_omni_moe.py and modular_qwen3_omni_moe.py), passing `ignore_keys={\"mrope_section\", \"interleaved\", \"mrope_interleaved\"}`. Additionally, `Qwen3OmniMoeCode2WavConfig` calls `standardize_rope_params` followed by `rope_config_validation` without ignored keys. This ensures RoPE parameters are properly standardized while allowing certain multi-rotary-position-embedding-specific keys to be excluded from validation checks.",
+    "commit": "e56abd2098dd2e2b0804691b93c13b48ae421627",
+    "pr": 16641,
+    "question": "In the fused topk_moe operation, how does the implementation determine the number of rows processed per workgroup and what pipeline variant to select?",
+    "ground_truth_answer": "The implementation uses a fixed rows_per_block of 4 to determine workgroup dispatch (CEIL_DIV(n_rows, rows_per_block) in ggml_vk_topk_moe), and selects pipeline variants based on ceil(log2(n_expert)) to index into pipeline_topk_moe array. The second dimension chooses between normalized (with_norm=true) and non-normalized variants depending on whether the fused operation sequence includes normalization steps (topk_moe_norm vs topk_moe).",
     "facts": [
-      "The `rope_config_validation` function is invoked in both `Qwen3OmniMoeConfig` and `Qwen3OmniMoeThinkerConfig` constructors",
-      "Both constructors pass `ignore_keys={\"mrope_section\", \"interleaved\", \"mrope_interleaved\"}` to `rope_config_validation`",
-      "`Qwen3OmniMoeCode2WavConfig` calls `standardize_rope_params` followed by `rope_config_validation` without ignored keys",
-      "The three excluded keys (mrope_section, interleaved, mrope_interleaved) are specific to multi-rotary-position-embedding configurations"
+      "The implementation uses a fixed rows_per_block value of 4 to determine workgroup dispatch",
+      "Workgroup dispatch is calculated as CEIL_DIV(n_rows, rows_per_block) in ggml_vk_topk_moe",
+      "Pipeline variants are selected based on ceil(log2(n_expert)) which indexes into the pipeline_topk_moe array",
+      "The second dimension of pipeline selection chooses between normalized (with_norm=true) and non-normalized variants",
+      "The normalized variant (topk_moe_norm) is used when the fused operation sequence includes normalization steps"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "src/transformers/models/qwen3_omni_moe/configuration_qwen3_omni_moe.py",
-        "src/transformers/models/qwen3_omni_moe/modular_qwen3_omni_moe.py"
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp"
       ],
       "is_core_question": true
     },
@@ -979,28 +995,28 @@
   },
   {
     "index": 34,
-    "id": "18340e0e-d2dc-4958-b8ba-b928c285d8eb",
+    "id": "526b2f2f-6b53-47af-af09-cfb53eeb072c",
     "repo": "prs/raw",
-    "commit": "ede7976cd2462ce868a0058c339c6b21baf7fc04",
-    "pr": 41758,
-    "question": "Why might certain attribute accesses on a vision-language model configuration be delegated to its text configuration subcomponent, and which attributes need to be explicitly excluded from this delegation to preserve correct model identification?",
-    "ground_truth_answer": "In Qwen2VLConfig and Qwen2_5_VLConfig, the __getattribute__ method delegates attribute access to text_config when present, allowing direct access to text model parameters. However, attributes like 'model_type' and '_name_or_path' must be excluded from this delegation (listed in the conditional check within __getattribute__) because they identify the parent vision-language model rather than its text component. Without these exclusions, accessing model_type would incorrectly return the text model's type instead of 'qwen2_vl' or 'qwen2_5_vl'.",
+    "commit": "5b180c3d60f3df61cd9955bc5c69e64537958f92",
+    "pr": 16634,
+    "question": "How does the Metal implementation determine whether to use the tensor API for matrix multiplication operations?",
+    "ground_truth_answer": "In ggml-metal-device.m, the implementation first checks if the device supports MTLGPUFamilyMetal4_GGML. By default, the tensor API is disabled for pre-M5 devices (unless GGML_METAL_TENSOR_ENABLE is set) due to performance concerns. The implementation then validates tensor API support by compiling test kernels for both f16 and bfloat types, dynamically disabling features if compilation fails. The final has_tensor flag is used to conditionally compile GGML_METAL_HAS_TENSOR in the Metal shader, switching between simdgroup matrix operations and the tensor API's matmul2d execution.",
     "facts": [
-      "Qwen2VLConfig and Qwen2_5_VLConfig implement __getattribute__ methods that delegate attribute access to text_config when present",
-      "The delegation allows direct access to text model parameters without explicitly accessing text_config",
-      "Attributes 'model_type' and '_name_or_path' are explicitly excluded from delegation via conditional checks in __getattribute__",
-      "These exclusions preserve model identification by ensuring model_type returns 'qwen2_vl' or 'qwen2_5_vl' instead of the text model's type",
-      "Without these exclusions, accessing model_type would incorrectly return the text component's model type rather than the vision-language model's type"
+      "The implementation in ggml-metal-device.m first checks if the device supports MTLGPUFamilyMetal4_GGML",
+      "By default, the tensor API is disabled for pre-M5 devices unless GGML_METAL_TENSOR_ENABLE is set, due to performance concerns",
+      "The implementation validates tensor API support by compiling test kernels for both f16 and bfloat types, dynamically disabling features if compilation fails",
+      "The has_tensor flag is used to conditionally compile GGML_METAL_HAS_TENSOR in the Metal shader",
+      "GGML_METAL_HAS_TENSOR switches between simdgroup matrix operations and the tensor API's matmul2d execution"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
-      "scope": "deep",
+      "scope": "broad",
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/qwen2_vl/configuration_qwen2_vl.py",
-        "src/transformers/models/qwen2_5_vl/configuration_qwen2_5_vl.py"
+        "ggml/src/ggml-metal/ggml-metal-device.m",
+        "ggml/src/ggml-metal/ggml-metal.metal"
       ],
       "is_core_question": true
     },
@@ -1009,45 +1025,46 @@
   },
   {
     "index": 35,
-    "id": "5335374c-35e4-4607-9649-0388f2e22225",
+    "id": "ac2c4b3a-7396-47f2-bbf5-3ad7b8bcd085",
     "repo": "prs/raw",
-    "commit": "7a833d1ccd41673030c85107f65f454c0c3222f5",
-    "pr": 41750,
-    "question": "How does the encoder now handle both causal and non-causal attention for text versus image modalities?",
-    "ground_truth_answer": "The encoder in CLIPTextTransformer (src/transformers/models/clip/modeling_clip.py) now uses create_causal_mask to generate attention masks and passes `is_causal=True` as a kwarg to self.encoder. This parameter is dynamically propagated through the attention layers via kwargs, allowing flash attention and SDPA to switch between causal (text) and full attention (image) modes. The old approach using separate causal_attention_mask and attention_mask parameters that were added together has been removed.",
+    "commit": "0e4a0cf2fae667d3efcf52f2f52398779d986b1d",
+    "pr": 16619,
+    "question": "In the conversation selection dialog, how does shift-clicking on a conversation checkbox differ from a regular click, and what state is used to enable this feature?",
+    "ground_truth_answer": "In ConversationSelectionDialog.svelte's toggleConversation function, shift-clicking selects/deselects all conversations between the last clicked item and the current one. It uses the lastClickedId state variable to track the previously clicked conversation ID. When shiftKey is true and lastClickedId is not null, it finds the indices of both conversations in filteredConversations, then iterates through all conversations in that range to apply the same selection state (add or delete from selectedIds).",
     "facts": [
-      "CLIPTextTransformer now uses create_causal_mask to generate attention masks for the encoder",
-      "The encoder passes `is_causal=True` as a kwarg to self.encoder, which is dynamically propagated through attention layers",
-      "The is_causal parameter allows flash attention and SDPA to switch between causal mode for text and full attention mode for images",
-      "The old approach of using separate causal_attention_mask and attention_mask parameters that were added together has been removed"
+      "In ConversationSelectionDialog.svelte's toggleConversation function, shift-clicking selects or deselects all conversations between the last clicked item and the current one",
+      "The lastClickedId state variable tracks the previously clicked conversation ID",
+      "When shiftKey is true and lastClickedId is not null, the function finds indices of both conversations in filteredConversations and iterates through the range to apply the same selection state",
+      "The selection state is applied by either adding or deleting conversation IDs from the selectedIds set"
     ],
     "metadata": {
-      "difficulty": "hard",
+      "difficulty": "moderate",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 2,
+      "n_context_files": 1,
       "key_files": [
-        "src/transformers/models/clip/modeling_clip.py",
-        "src/transformers/models/metaclip_2/modeling_metaclip_2.py"
+        "tools/server/webui/src/lib/components/app/chat/ChatSettings/ConversationSelectionDialog.svelte"
       ],
-      "is_core_question": true
+      "is_core_question": false
     },
     "status": "pending",
     "deepwiki_answer": null
   },
   {
     "index": 36,
-    "id": "0d84da02-c70a-4053-bb81-c29c35360f4f",
+    "id": "22a9ceb2-15b8-41b4-85b8-92121ccb5cb4",
     "repo": "prs/raw",
-    "commit": "9a19171fad3025f57fae72d8f3598f44b68102e5",
-    "pr": 41725,
-    "question": "How does the fast variant handle resizing images to ensure dimensions are compatible with downstream processing requirements?",
-    "ground_truth_answer": "In GLPNImageProcessorFast.resize (src/transformers/models/glpn/image_processing_glpn_fast.py), the method takes the original image height and width, then rounds both down to the closest multiple of size_divisor using integer division: new_h = height // size_divisor * size_divisor and new_w = width // size_divisor * size_divisor. This ensures the output dimensions are evenly divisible by the specified divisor.",
+    "commit": "1411d9275ad7d2af44543fb9c1e64eea1e1c8de7",
+    "pr": 16618,
+    "question": "How does the streaming chat completion handler accumulate tool call deltas across multiple chunks, and what triggers the finalization of an open batch?",
+    "ground_truth_answer": "In ChatService.handleStreamResponse (tools/server/webui/src/lib/services/chat.ts), tool call deltas are accumulated by calling processToolCallDelta for each chunk's tool_calls field. This invokes mergeToolCallDeltas with a toolCallIndexOffset that tracks where the current batch started. When content or reasoningContent appears in a subsequent chunk, finalizeOpenToolCallBatch is called, which sets toolCallIndexOffset to the current aggregatedToolCalls.length and marks the batch as closed. This ensures that new tool call indices start from the correct offset when a fresh batch begins.",
     "facts": [
-      "GLPNImageProcessorFast.resize method is located in src/transformers/models/glpn/image_processing_glpn_fast.py",
-      "The resize method rounds down both height and width to the closest multiple of size_divisor using integer division: new_h = height // size_divisor * size_divisor and new_w = width // size_divisor * size_divisor",
-      "This rounding operation ensures output dimensions are evenly divisible by the specified size_divisor parameter"
+      "In ChatService.handleStreamResponse, tool call deltas are accumulated by calling processToolCallDelta for each chunk's tool_calls field",
+      "processToolCallDelta invokes mergeToolCallDeltas with a toolCallIndexOffset parameter that tracks where the current batch started",
+      "When content or reasoningContent appears in a subsequent chunk, finalizeOpenToolCallBatch is called",
+      "finalizeOpenToolCallBatch sets toolCallIndexOffset to the current aggregatedToolCalls.length and marks the batch as closed",
+      "This offset mechanism ensures new tool call indices start from the correct position when a fresh batch begins"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -1056,7 +1073,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/transformers/models/glpn/image_processing_glpn_fast.py"
+        "tools/server/webui/src/lib/services/chat.ts"
       ],
       "is_core_question": true
     },
@@ -1065,26 +1082,27 @@
   },
   {
     "index": 37,
-    "id": "2764bec3-8783-440a-a895-01eb49ba8d05",
+    "id": "9b3042fe-7eaf-4aae-ab82-246232c7d5e5",
     "repo": "prs/raw",
-    "commit": "71db0d49e99884566026c140f8b12b61056fa8dc",
-    "pr": 41672,
-    "question": "What data structure and naming convention are used when uploading benchmark run results to the Hub, and how are multiple benchmark entries combined before upload?",
-    "ground_truth_answer": "In BenchmarkRunner.push_results_to_hub (benchmark_v2/framework/benchmark_runner.py), each benchmark result is converted into a row dictionary containing benchmark_config_hash, config, measurements, and metadata fields. These rows are collected into a list and used to create a Dataset object via Dataset.from_list(). The dataset is then written to a JSONL file (one JSON object per line) in a temporary directory. The file is uploaded to the Hub with the naming pattern f\"benchmark_run_{timestamp}.jsonl\" where timestamp defaults to the current UTC time in %Y%m%d_%H%M%S format.",
+    "commit": "2330de7b847ca84eac766df372c604c26db72747",
+    "pr": 16613,
+    "question": "How does the implementation dispatch type-specific kernel execution for mathematical rounding operations in the accelerator backend?",
+    "ground_truth_answer": "In ggml/src/ggml-sycl/element_wise.cpp, functions like ggml_sycl_op_floor, ggml_sycl_op_ceil, ggml_sycl_op_round, and ggml_sycl_op_trunc call dispatch_ggml_sycl_op_unary with a lambda that submits a parallel_for operation to the SYCL queue. Each lambda invokes the corresponding kernel (unary_op_floor_kernel, unary_op_ceil_kernel, etc.) with the appropriate work group configuration, typically using 256 work items per block calculated via ceil_div(k_elements, 256).",
     "facts": [
-      "In BenchmarkRunner.push_results_to_hub, each benchmark result is converted into a row dictionary containing benchmark_config_hash, config, measurements, and metadata fields",
-      "The row dictionaries are collected into a list and used to create a Dataset object via Dataset.from_list()",
-      "The dataset is written to a JSONL file format (one JSON object per line) in a temporary directory",
-      "The file is uploaded to the Hub with the naming pattern f\"benchmark_run_{timestamp}.jsonl\" where timestamp defaults to current UTC time in %Y%m%d_%H%M%S format"
+      "In ggml/src/ggml-sycl/element_wise.cpp, functions ggml_sycl_op_floor, ggml_sycl_op_ceil, ggml_sycl_op_round, and ggml_sycl_op_trunc call dispatch_ggml_sycl_op_unary to dispatch type-specific kernel execution",
+      "Each function passes a lambda to dispatch_ggml_sycl_op_unary that submits a parallel_for operation to the SYCL queue",
+      "The lambda invokes the corresponding type-specific kernel (unary_op_floor_kernel, unary_op_ceil_kernel, unary_op_round_kernel, or unary_op_trunc_kernel)",
+      "The work group configuration uses 256 work items per block, calculated via ceil_div(k_elements, 256)"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 2,
       "key_files": [
-        "benchmark_v2/framework/benchmark_runner.py"
+        "ggml/src/ggml-sycl/element_wise.cpp",
+        "ggml/src/ggml-sycl/element_wise.hpp"
       ],
       "is_core_question": true
     },
@@ -1093,30 +1111,28 @@
   },
   {
     "index": 38,
-    "id": "5daa005b-ba77-42ee-89e8-4c181c81c0b7",
+    "id": "f3f36bb2-9129-4e72-bb60-efd0c641a3b5",
     "repo": "prs/raw",
-    "commit": "8725ce10edb29771fb9a1aa108e6a04859efe973",
-    "pr": 41647,
-    "question": "In the expert routing mechanism, how is the separation between routing decisions and gating values maintained when using the bias correction term?",
-    "ground_truth_answer": "The bias correction term (e_score_correction_bias) is added to create a separate router_logits_for_choice tensor used exclusively for selecting experts via group_scores and scores_for_choice. However, the final topk_weights are gathered from the original router_logits (without bias), ensuring gating values multiplied with FFN outputs remain unaffected by the bias term. This separation is implemented in the route_tokens_to_experts method across modeling_deepseek_v3.py, modular_deepseek_v3.py, modeling_glm4_moe.py, and modeling_glm4v_moe.py.",
+    "commit": "81387858f1fbcc1acedbd308486e1016618ca8f8",
+    "pr": 16602,
+    "question": "How does the new transposed mxfp4 conversion differ from the original non-transposed version in terms of indexing strategy?",
+    "ground_truth_answer": "The transposed conversion (kernel_convert_block_mxfp4_trans) swaps the indexing dimensions compared to the original. In cvt.cl, the source block offset becomes i00 + i01 * ne00_blk + i02 * ne00_blk * ne01, while the destination offset becomes i01 + i00 * ne01 + i02 * ne00_blk * ne01, effectively performing a transpose during the SOA conversion. The restore operation performs the inverse index mapping.",
     "facts": [
-      "The bias correction term (e_score_correction_bias) is added to create a separate router_logits_for_choice tensor that is used exclusively for expert selection",
-      "Expert selection uses router_logits_for_choice through group_scores and scores_for_choice computations",
-      "The final topk_weights are gathered from the original router_logits without the bias term",
-      "Gating values multiplied with FFN outputs use the original router_logits, keeping them unaffected by the bias correction",
-      "This separation mechanism is implemented in the route_tokens_to_experts method across modeling_deepseek_v3.py, modular_deepseek_v3.py, modeling_glm4_moe.py, and modeling_glm4v_moe.py"
+      "The transposed conversion function kernel_convert_block_mxfp4_trans swaps indexing dimensions compared to the original non-transposed version",
+      "In cvt.cl, the transposed version uses source block offset i00 + i01 * ne00_blk + i02 * ne00_blk * ne01",
+      "In cvt.cl, the transposed version uses destination offset i01 + i00 * ne01 + i02 * ne00_blk * ne01",
+      "The swapped indexing effectively performs a transpose during the SOA (Structure of Arrays) conversion",
+      "The restore operation performs the inverse index mapping of the conversion"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 4,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
-        "src/transformers/models/deepseek_v3/modular_deepseek_v3.py",
-        "src/transformers/models/glm4_moe/modeling_glm4_moe.py",
-        "src/transformers/models/glm4v_moe/modeling_glm4v_moe.py"
+        "ggml/src/ggml-opencl/kernels/cvt.cl",
+        "ggml/src/ggml-opencl/ggml-opencl.cpp"
       ],
       "is_core_question": true
     },
@@ -1125,16 +1141,16 @@
   },
   {
     "index": 39,
-    "id": "0c1e6d0e-eb21-4343-91e0-3fd2887b46f1",
+    "id": "6369edfd-80c0-4426-a9f2-2281e3ae90a5",
     "repo": "prs/raw",
-    "commit": "5f8d02f2f12e771d59d473702bc61a7e7c4a6255",
-    "pr": 41626,
-    "question": "What happens if you call apply_chat_template with tokenize=False and return_dict=True together?",
-    "ground_truth_answer": "In tokenization_utils_base.py's PreTrainedTokenizerBase.apply_chat_template method, if tokenize=False is passed, return_dict is automatically forced to False regardless of its input value, since dictionaries are only returned by the tokenizer and there's no tokenizer output to wrap in a dict when tokenization is disabled.",
+    "commit": "fa882fd2b1bcb663de23af06fdc391489d05b007",
+    "pr": 16576,
+    "question": "How does the Metal buffer implementation generate virtual addresses for non-shared GPU memory allocations?",
+    "ground_truth_answer": "In ggml_metal_buffer_init (ggml-metal-device.m), when shared is false, the implementation uses an atomic counter g_addr_device initialized to 0x000000400ULL. It assigns res->all_data by atomically fetching and incrementing this counter by size_aligned using atomic_fetch_add_explicit with relaxed memory ordering, ensuring each allocation gets a unique virtual address without relying on Metal's gpuAddress property.",
     "facts": [
-      "PreTrainedTokenizerBase.apply_chat_template method is located in tokenization_utils_base.py",
-      "When tokenize=False is passed to apply_chat_template, return_dict is automatically forced to False",
-      "The return_dict parameter is forced to False because dictionaries are only returned by the tokenizer, and there is no tokenizer output when tokenization is disabled"
+      "In ggml_metal_buffer_init (ggml-metal-device.m), when shared is false, the implementation uses an atomic counter g_addr_device initialized to 0x000000400ULL",
+      "The implementation assigns res->all_data by atomically fetching and incrementing g_addr_device by size_aligned using atomic_fetch_add_explicit with relaxed memory ordering",
+      "This mechanism ensures each non-shared GPU memory allocation gets a unique virtual address without relying on Metal's gpuAddress property"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -1143,7 +1159,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/transformers/tokenization_utils_base.py"
+        "ggml/src/ggml-metal/ggml-metal-device.m"
       ],
       "is_core_question": true
     },
@@ -1152,27 +1168,28 @@
   },
   {
     "index": 40,
-    "id": "6fa73e4f-2a0e-4f48-bee5-148f7b6b477e",
+    "id": "0d973573-1429-4059-9bf0-b4096a1ee8e0",
     "repo": "prs/raw",
-    "commit": "bf815e9b5ea076f758cc58f73f2be2d36237f9ec",
-    "pr": 41625,
-    "question": "How does the updated eager attention mechanism apply masking before computing attention probabilities?",
-    "ground_truth_answer": "In the eager_attention_forward function (e.g., src/transformers/models/vit/modeling_vit.py), when attention_mask is not None, it is first sliced to match the key sequence length using attention_mask[:, :, :, : key.shape[-2]], then added directly to the raw attention weights (attn_weights + attention_mask) before applying softmax. This additive masking approach replaces the previous implementation that applied softmax first and handled masking differently.",
+    "commit": "f4ce81c45e7bd910e36bf44c253fc5255c49b1e4",
+    "pr": 16559,
+    "question": "How does the optimized sum kernel in Metal coordinate work across SIMD groups to compute a single scalar result from an array?",
+    "ground_truth_answer": "In kernel_op_sum_f32 (ggml/src/ggml-metal/ggml-metal.metal), each thread first accumulates a strided portion of the input via `sumf += src0[i0]` where i0 increments by ntg.x. Within each SIMD group, `simd_sum(sumf)` reduces those partial sums, and lane 0 writes its result to shared memory (`shmem_f32[sgitg]`). After a barrier, SIMD group 0 reads all partial results (one per SIMD group) and performs a final `simd_sum(v)` to produce the total, which thread 0 writes to dst[0].",
     "facts": [
-      "In eager_attention_forward function, when attention_mask is not None, it is first sliced to match the key sequence length using attention_mask[:, :, :, : key.shape[-2]]",
-      "The sliced attention_mask is added directly to the raw attention weights using attn_weights + attention_mask before applying softmax",
-      "This additive masking approach replaces the previous implementation that applied softmax first and then handled masking differently"
+      "In kernel_op_sum_f32, each thread accumulates a strided portion of the input using `sumf += src0[i0]` where i0 increments by ntg.x",
+      "Within each SIMD group, `simd_sum(sumf)` reduces partial sums and lane 0 writes the result to shared memory at `shmem_f32[sgitg]`",
+      "After a threadgroup barrier, SIMD group 0 reads all partial results from shared memory (one per SIMD group)",
+      "SIMD group 0 performs a final `simd_sum(v)` on the partial results to produce the total sum",
+      "Thread 0 writes the final sum result to dst[0]"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 3,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/vit/modeling_vit.py",
-        "src/transformers/models/deit/modeling_deit.py",
-        "src/transformers/models/dinov2/modeling_dinov2.py"
+        "ggml/src/ggml-metal/ggml-metal.metal",
+        "ggml/src/ggml-metal/ggml-metal-ops.cpp"
       ],
       "is_core_question": true
     },
@@ -1181,26 +1198,27 @@
   },
   {
     "index": 41,
-    "id": "f48d5d50-a146-4f4e-8501-fdc6d290489a",
+    "id": "506a54a6-c7d5-45ba-b8ef-b215f00b809e",
     "repo": "prs/raw",
-    "commit": "eef9fb2af3db888cf93f81b425f9db453336726c",
-    "pr": 41612,
-    "question": "How does the encoder-decoder cache class handle initialization when provided with DDP-compatible cache data containing sliding window tensors?",
-    "ground_truth_answer": "In EncoderDecoderCache.__init__ (src/transformers/cache_utils.py), when a single iterable argument is passed, it checks the length of each combined_cache_data tuple. If the length is 6, it splits the tuple into two sets of 3 elements (key, value, sliding_window_tensor) for self-attention and cross-attention respectively. If the length is 4, it splits into two sets of 2 elements (key, value) without sliding window tensors for backward compatibility. These extracted data are then passed to DynamicCache constructors for both self_attention_cache and cross_attention_cache.",
+    "commit": "9ad4f1931ee0f3b41d9355245ef744786aaae0aa",
+    "pr": 16542,
+    "question": "How does the Metal implementation ensure thread-safe summation of partial results across all kernel positions when computing a single output element in the 2D transposed convolution?",
+    "ground_truth_answer": "In kernel_conv_transpose_2d (ggml-metal.metal), each thread computes a partial sum for one kernel position and stores it in shared_sum[tid]. After a threadgroup_barrier, thread 0 serially accumulates all partial sums from shared_sum and writes the final result to the output buffer.",
     "facts": [
-      "EncoderDecoderCache.__init__ accepts a single iterable argument containing combined_cache_data tuples",
-      "When combined_cache_data tuple length is 6, it splits into two sets of 3 elements (key, value, sliding_window_tensor) for self-attention and cross-attention",
-      "When combined_cache_data tuple length is 4, it splits into two sets of 2 elements (key, value) without sliding window tensors for backward compatibility",
-      "The extracted data from both split patterns are passed to DynamicCache constructors for self_attention_cache and cross_attention_cache"
+      "In kernel_conv_transpose_2d, each thread computes a partial sum for one kernel position and stores it in shared_sum[tid]",
+      "A threadgroup_barrier synchronization is used to ensure all threads complete their partial sum computations before accumulation",
+      "Thread 0 serially accumulates all partial sums from the shared_sum array after the barrier",
+      "The accumulated final result is written to the output buffer by thread 0"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/cache_utils.py"
+        "ggml/src/ggml-metal/ggml-metal.metal",
+        "ggml/src/ggml-metal/ggml-metal-ops.cpp"
       ],
       "is_core_question": true
     },
@@ -1209,28 +1227,27 @@
   },
   {
     "index": 42,
-    "id": "1f971f0c-93f9-4f1f-8a46-24bdb8ad7a87",
+    "id": "cdd2d03f-9d21-4c94-921b-f4bb3512327f",
     "repo": "prs/raw",
-    "commit": "2935a1be19f12176c455cb65d67dc5a3bb84cd77",
-    "pr": 41605,
-    "question": "When flash attention is invoked with float32 queries, how does the system determine which dtype to cast them to before the forward pass?",
-    "ground_truth_answer": "The `get_target_dtype` function in `src/transformers/integrations/flash_attention.py` handles this. It first checks if autocast is enabled and returns `torch.get_autocast_gpu_dtype()`. If not, it checks for a `_pre_quantization_dtype` attribute on the config for quantized models. Otherwise, it iterates through the module's Linear layers and returns the weight dtype of the first one found.",
+    "commit": "3f750f8d760ab5a61491e6a9409072dfeee4b4d7",
+    "pr": 16539,
+    "question": "How does the Metal backend determine the number of threadgroups to dispatch when executing the SGD optimizer step?",
+    "ground_truth_answer": "In ggml_metal_op_opt_step_sgd (ggml-metal-ops.cpp), the number of threadgroups is calculated as n = (np + nth - 1) / nth, where np is the total number of elements and nth is the minimum of the pipeline's maximum threads per threadgroup and ne0. This ensures all elements are covered across threadgroups.",
     "facts": [
-      "The get_target_dtype function in src/transformers/integrations/flash_attention.py determines the target dtype for float32 queries before flash attention forward pass",
-      "If autocast is enabled, get_target_dtype returns torch.get_autocast_gpu_dtype()",
-      "If autocast is not enabled, get_target_dtype checks for a _pre_quantization_dtype attribute on the config for quantized models",
-      "If _pre_quantization_dtype is not available, get_target_dtype iterates through the module's Linear layers and returns the weight dtype of the first Linear layer found"
+      "In ggml_metal_op_opt_step_sgd (ggml-metal-ops.cpp), the number of threadgroups is calculated using the formula n = (np + nth - 1) / nth",
+      "np represents the total number of elements to process",
+      "nth is the minimum of the pipeline's maximum threads per threadgroup and ne0",
+      "This calculation ensures all elements are covered across the dispatched threadgroups"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 3,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/integrations/flash_attention.py",
-        "src/transformers/models/bark/modeling_bark.py",
-        "src/transformers/models/stablelm/modeling_stablelm.py"
+        "ggml/src/ggml-metal/ggml-metal-ops.cpp",
+        "ggml/src/ggml-metal/ggml-metal.metal"
       ],
       "is_core_question": true
     },
@@ -1239,26 +1256,29 @@
   },
   {
     "index": 43,
-    "id": "193e81b9-1707-4887-8150-047fbc3eb7ae",
+    "id": "151986a5-ad2d-42b1-846e-b393267c605c",
     "repo": "prs/raw",
-    "commit": "1fb3fc4db0e87fd7c2f57a36b6b32ee6fa69c50c",
-    "pr": 41577,
-    "question": "How does the refactored kernel loading approach handle the scenario where a requested kernel is not found in the hub mapping?",
-    "ground_truth_answer": "In lazy_load_kernel (src/transformers/integrations/hub_kernels.py), if the kernel_name is not in _HUB_KERNEL_MAPPING, it logs a warning message, sets mapping[kernel_name] to None, and returns None. If the `kernels` package is unavailable, it attempts backward compatibility by importing the kernel as a module (e.g., converting 'causal-conv1d' to 'causal_conv1d' and checking is_causal_conv1d_available), falling back to None if that also fails.",
+    "commit": "bcf5bda6f5df559565d11d7c8e8295c1159a85ec",
+    "pr": 16536,
+    "question": "In the refactored MMQ shader pipeline, how does the data flow differ for quant structures between the old and new approaches, and what is the primary benefit of this change?",
+    "ground_truth_answer": "The refactor changes how quant structures are cached. Previously, quants were converted to 8-bit integers when loading to shared memory (buf_a_qs and buf_b_qs arrays). In the new implementation (mul_mmq_shmem_types.glsl and mul_mmq_funcs.glsl), quant structures are copied through shared memory as structured types (block_a_cache and block_b_cache), then loaded into register cache (cache_a and cache_b), and only converted to 8-bit integers directly before the integer dot operation in mmq_dot_product(). This saves both shared memory and registers by keeping data in a more compact format until it's needed for computation.",
     "facts": [
-      "In lazy_load_kernel (src/transformers/integrations/hub_kernels.py), if kernel_name is not in _HUB_KERNEL_MAPPING, it logs a warning message, sets mapping[kernel_name] to None, and returns None",
-      "If the `kernels` package is unavailable, lazy_load_kernel attempts backward compatibility by importing the kernel as a module",
-      "For backward compatibility, lazy_load_kernel converts the kernel name format (e.g., 'causal-conv1d' to 'causal_conv1d') and checks availability using functions like is_causal_conv1d_available",
-      "If the backward compatibility import also fails, lazy_load_kernel falls back to returning None"
+      "In the old approach, quants were converted to 8-bit integers when loading to shared memory (buf_a_qs and buf_b_qs arrays)",
+      "In the new implementation (mul_mmq_shmem_types.glsl and mul_mmq_funcs.glsl), quant structures are copied through shared memory as structured types (block_a_cache and block_b_cache)",
+      "The new implementation loads quant structures from shared memory into register cache (cache_a and cache_b)",
+      "In the new approach, conversion to 8-bit integers only happens directly before the integer dot operation in mmq_dot_product()",
+      "This refactor saves both shared memory and registers by keeping data in a more compact format until needed for computation"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 3,
       "key_files": [
-        "src/transformers/integrations/hub_kernels.py"
+        "ggml/src/ggml-vulkan/vulkan-shaders/mul_mmq.comp",
+        "ggml/src/ggml-vulkan/vulkan-shaders/mul_mmq_shmem_types.glsl",
+        "ggml/src/ggml-vulkan/vulkan-shaders/mul_mmq_funcs.glsl"
       ],
       "is_core_question": true
     },
@@ -1267,17 +1287,17 @@
   },
   {
     "index": 44,
-    "id": "9016b5c3-2dba-48dd-893c-72bd50531f18",
+    "id": "a11d6c9e-bc5e-4ac6-82d7-bf7aaf0ade4e",
     "repo": "prs/raw",
-    "commit": "9e4199ede396f136b3dff1e918816fcc3a65f0a0",
-    "pr": 41572,
-    "question": "How does the create_causal_mask_mapping method handle image group identification for tokens that are not part of an image?",
-    "ground_truth_answer": "In create_causal_mask_mapping (src/transformers/models/gemma3/modeling_gemma3.py and modular_gemma3.py), non-image tokens receive an image_group_ids value of -1. This is achieved by using torch.where to check the is_image boolean mask: where tokens are images, they get their computed image_group_ids value, otherwise they're assigned -1 directly as a scalar rather than using torch.full_like.",
+    "commit": "e60f241eacec42d3bd7c9edd37d236ebf35132a8",
+    "pr": 16531,
+    "question": "How does the Flash Attention implementation determine whether it can support a given operation based on its head size configuration?",
+    "ground_truth_answer": "In ggml_metal_device_supports_op (ggml/src/ggml-metal/ggml-metal-device.m), the function checks the head size (op->src[0]->ne[0]) against a list of supported values. For GGML_OP_FLASH_ATTN_EXT operations, it returns true only if the head size matches one of the explicitly supported dimensions (32, 40, 64, 80, 96, 112, 128, 192, 256, or 576). If the head size doesn't match any of these values, the operation is not supported.",
     "facts": [
-      "In create_causal_mask_mapping method, non-image tokens receive an image_group_ids value of -1",
-      "The method uses torch.where to check the is_image boolean mask to determine token types",
-      "For non-image tokens, -1 is assigned directly as a scalar rather than using torch.full_like",
-      "Image tokens get their computed image_group_ids value based on the torch.where condition"
+      "The ggml_metal_device_supports_op function in ggml/src/ggml-metal/ggml-metal-device.m checks if Flash Attention operations are supported based on head size",
+      "The head size is retrieved from op->src[0]->ne[0]",
+      "For GGML_OP_FLASH_ATTN_EXT operations, the function returns true only if the head size matches one of these explicitly supported dimensions: 32, 40, 64, 80, 96, 112, 128, 192, 256, or 576",
+      "If the head size doesn't match any of the supported values, the operation is not supported and the function returns false"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -1286,8 +1306,8 @@
       "includes_code": false,
       "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/gemma3/modeling_gemma3.py",
-        "src/transformers/models/gemma3/modular_gemma3.py"
+        "ggml/src/ggml-metal/ggml-metal-device.m",
+        "ggml/src/ggml-metal/ggml-metal.metal"
       ],
       "is_core_question": true
     },
@@ -1296,29 +1316,27 @@
   },
   {
     "index": 45,
-    "id": "8bc25a47-57fa-4909-95a9-10488174b113",
+    "id": "6eaeafe3-ebd9-464d-adb2-680e87b8b280",
     "repo": "prs/raw",
-    "commit": "b3e3c3dc93f29770a768d6943c9fb9d377e5edce",
-    "pr": 41536,
-    "question": "When interpolating positional embeddings for vision patches, which input tensor's device is used to ensure tensor consistency across distributed training scenarios?",
-    "ground_truth_answer": "In fast_pos_embed_interpolate methods across the Qwen3VL model variants, the device is now taken from the grid_thw parameter rather than from pos_embed.weight.device. This change ensures idx_tensor, weight_tensor, and the embedding lookup results all reside on the same device, preventing device mismatch errors in FSDP2 training where pos_embed.weight may be on a meta device.",
+    "commit": "a31cf36ad946a13b3a646bf0dadf2a481e89f944",
+    "pr": 16529,
+    "question": "How does the Metal implementation of the AdamW optimizer step update momentum and variance buffers before computing the final parameter update?",
+    "ground_truth_answer": "In kernel_opt_step_adamw_f32 (ggml-metal.metal), the momentum buffer g_m is updated as `gmi = g_m[gid] * beta1 + gi * (1.0f - beta1)`, and the variance buffer g_v is updated as `gvi = g_v[gid] * beta2 + gi * gi * (1.0f - beta2)`. These updated values are then bias-corrected by multiplying with beta1h and beta2h respectively before computing the parameter update: `x[gid] = x[gid] * (1.0f - alpha * wd) - alpha * mh / vh`, where mh is the bias-corrected momentum and vh is the bias-corrected variance plus epsilon.",
     "facts": [
-      "In fast_pos_embed_interpolate methods across Qwen3VL model variants, the device is taken from the grid_thw parameter instead of pos_embed.weight.device",
-      "This change ensures idx_tensor, weight_tensor, and embedding lookup results all reside on the same device",
-      "The device source change prevents device mismatch errors in FSDP2 training where pos_embed.weight may be on a meta device",
-      "The affected files include modeling_qwen3_vl.py, modeling_qwen3_vl_moe.py, modeling_qwen3_omni_moe.py, and modular_qwen3_vl.py"
+      "In kernel_opt_step_adamw_f32, the momentum buffer g_m is updated using the formula: gmi = g_m[gid] * beta1 + gi * (1.0f - beta1)",
+      "In kernel_opt_step_adamw_f32, the variance buffer g_v is updated using the formula: gvi = g_v[gid] * beta2 + gi * gi * (1.0f - beta2)",
+      "The updated momentum and variance values are bias-corrected by multiplying with beta1h and beta2h respectively",
+      "The parameter update is computed as: x[gid] = x[gid] * (1.0f - alpha * wd) - alpha * mh / vh, where mh is bias-corrected momentum and vh is bias-corrected variance plus epsilon"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 4,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/qwen3_vl/modeling_qwen3_vl.py",
-        "src/transformers/models/qwen3_vl_moe/modeling_qwen3_vl_moe.py",
-        "src/transformers/models/qwen3_omni_moe/modeling_qwen3_omni_moe.py",
-        "src/transformers/models/qwen3_vl/modular_qwen3_vl.py"
+        "ggml/src/ggml-metal/ggml-metal.metal",
+        "ggml/src/ggml-metal/ggml-metal-ops.cpp"
       ],
       "is_core_question": true
     },
@@ -1327,27 +1345,28 @@
   },
   {
     "index": 46,
-    "id": "ffe96dbd-d25d-470b-ac03-416b3e33de65",
+    "id": "44fa577c-42e5-4a62-9c4f-94e3a621702f",
     "repo": "prs/raw",
-    "commit": "3813a8e3a1663993b3ec44c455cab8af1beca2b5",
-    "pr": 41534,
-    "question": "How does the new video processor maintain output compatibility with the existing image-based processor?",
-    "ground_truth_answer": "VideoMAEVideoProcessor overrides the preprocess method (in src/transformers/models/videomae/video_processing_videomae.py) to rename the output key from 'pixel_values_videos' (used internally by BaseVideoProcessor) to 'pixel_values', matching the naming convention expected by VideoMAE models and maintaining compatibility with VideoMAEImageProcessor's output format.",
+    "commit": "e38b7c6e9e4453e3b3e96d76e38bc2ccb6bce458",
+    "pr": 16528,
+    "question": "In the no-cache attention implementation, how does the system handle models with sliding window attention versus models without it when building attention masks?",
+    "ground_truth_answer": "In llm_graph_input_attn_no_cache::set_input (src/llama-graph.cpp), the system creates two separate masks: self_kq_mask is always filled with standard masking (causal + sequence separation), while self_kq_mask_swa is conditionally created only if hparams.swa_type != LLAMA_SWA_TYPE_NONE. The fill_mask lambda applies sliding window masking logic via llama_hparams::is_masked_swa to the SWA mask. During attention building in build_attn, the appropriate mask is selected based on whether the current layer is an SWA layer (hparams.is_swa(il)).",
     "facts": [
-      "VideoMAEVideoProcessor overrides the preprocess method in src/transformers/models/videomae/video_processing_videomae.py",
-      "The preprocess method renames the output key from 'pixel_values_videos' to 'pixel_values'",
-      "BaseVideoProcessor internally uses 'pixel_values_videos' as the output key name",
-      "The 'pixel_values' key name matches the naming convention expected by VideoMAE models",
-      "This renaming maintains compatibility with VideoMAEImageProcessor's output format"
+      "In llm_graph_input_attn_no_cache::set_input, two separate masks are created: self_kq_mask for standard masking and self_kq_mask_swa for sliding window attention",
+      "self_kq_mask is always filled with standard masking (causal + sequence separation)",
+      "self_kq_mask_swa is conditionally created only if hparams.swa_type != LLAMA_SWA_TYPE_NONE",
+      "The fill_mask lambda applies sliding window masking logic via llama_hparams::is_masked_swa to the SWA mask",
+      "During attention building in build_attn, the appropriate mask is selected based on hparams.is_swa(il) to determine if the current layer is an SWA layer"
     ],
     "metadata": {
       "difficulty": "hard",
       "type": "open_question",
       "scope": "deep",
       "includes_code": false,
-      "n_context_files": 1,
+      "n_context_files": 2,
       "key_files": [
-        "src/transformers/models/videomae/video_processing_videomae.py"
+        "src/llama-graph.cpp",
+        "src/llama-graph.h"
       ],
       "is_core_question": true
     },
@@ -1356,16 +1375,17 @@
   },
   {
     "index": 47,
-    "id": "af51032e-83ba-4245-84ad-2051e440afb5",
+    "id": "7287f3bf-2f7d-4fcf-89c2-8596dee88752",
     "repo": "prs/raw",
-    "commit": "70e871959c3ced65ee4804a55fb27b37876db2bf",
-    "pr": 41449,
-    "question": "How does the training loop determine the effective batch size when averaging tokens across devices versus using data parallelism?",
-    "ground_truth_answer": "In Trainer._get_num_items_in_batch (src/transformers/trainer.py), when average_tokens_across_devices is True and world_size > 1, the batch item count is gathered across all processes and summed. Otherwise, with n_gpu > 1 (data parallelism), the batch size is divided by n_gpu to approximate the per-device contribution.",
+    "commit": "2c301e91abb92d03c1a682b4b540ba835562a74b",
+    "pr": 16526,
+    "question": "When the JSON partial parser encounters an incomplete Unicode escape sequence like \\uD800 followed by a backslash, what default padding does it use and why?",
+    "ground_truth_answer": "In common_json_parse (common/json-partial.cpp), the unicode_marker_padding is initialized to \"udc00\" (a low surrogate) to handle the edge case where a high surrogate (U+D800-U+DBFF) is immediately followed by a backslash. This ensures that if a partial high surrogate is followed by just a backslash, it gets completed with a valid low surrogate to form a proper surrogate pair.",
     "facts": [
-      "Trainer._get_num_items_in_batch in src/transformers/trainer.py determines the effective batch size calculation method",
-      "When average_tokens_across_devices is True and world_size > 1, the batch item count is gathered across all processes and summed",
-      "When n_gpu > 1 (data parallelism) without token averaging, the batch size is divided by n_gpu to approximate per-device contribution"
+      "In common/json-partial.cpp, the unicode_marker_padding is initialized to \"udc00\"",
+      "\"udc00\" represents a low surrogate character in Unicode",
+      "This padding handles the edge case where a high surrogate (U+D800-U+DBFF) is immediately followed by a backslash",
+      "The padding ensures a partial high surrogate followed by a backslash forms a valid surrogate pair by completing it with a low surrogate"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -1374,7 +1394,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "src/transformers/trainer.py"
+        "common/json-partial.cpp"
       ],
       "is_core_question": true
     },
@@ -1383,17 +1403,18 @@
   },
   {
     "index": 48,
-    "id": "6b75542e-7cd7-4250-be6f-64338bdc57fa",
+    "id": "9b6f6468-a1fc-410d-ad45-9be27ea26d53",
     "repo": "prs/raw",
-    "commit": "8976ceb0510e139282050a1b12d9e6afb21bce35",
-    "pr": 41432,
-    "question": "How does the AST-based approach extract function arguments while excluding self, *args, and **kwargs parameters?",
-    "ground_truth_answer": "The _extract_function_args helper (utils/check_docstrings.py) takes an ast.FunctionDef or ast.AsyncFunctionDef node and collects all argument names from posonlyargs, args, and kwonlyargs. It then filters out any argument named 'self' by returning only [a.arg for a in all_args if a.arg != \"self\"]. This approach naturally excludes *args (vararg) and **kwargs (kwarg) since they're stored in separate attributes (func_node.args.vararg and func_node.args.kwarg) that aren't included in the collection.",
+    "commit": "c7be9febcbafa9af7d1b9443f86475c59c9c5f87",
+    "pr": 16521,
+    "question": "In the refactored argsort implementation, how does the bitonic sort kernel handle cases where the number of columns exceeds the maximum work group size?",
+    "ground_truth_answer": "In `k_argsort_f32_i32` (ggml/src/ggml-sycl/ggml-sycl.cpp), the kernel uses a `tasks_per_thread` parameter to allow each thread to process multiple elements. The work group size (`nth`) is determined by finding the largest power of 2 up to `max_block_size`, then `tasks_per_thread` is calculated as `ncols_pad / nth`. Each thread iterates over its assigned tasks, processing columns at indices `col_index * tasks_per_thread + i`, enabling the kernel to handle arbitrarily large column counts within the shared memory constraints.",
     "facts": [
-      "The _extract_function_args helper in utils/check_docstrings.py takes an ast.FunctionDef or ast.AsyncFunctionDef node as input",
-      "The function collects argument names from three sources: posonlyargs, args, and kwonlyargs attributes",
-      "Arguments named 'self' are filtered out using list comprehension: [a.arg for a in all_args if a.arg != 'self']",
-      "*args and **kwargs are naturally excluded because they are stored in separate attributes (func_node.args.vararg and func_node.args.kwarg) that are not included in the collection"
+      "The k_argsort_f32_i32 kernel in ggml/src/ggml-sycl/ggml-sycl.cpp uses a tasks_per_thread parameter to allow each thread to process multiple elements",
+      "The work group size (nth) is determined by finding the largest power of 2 up to max_block_size",
+      "tasks_per_thread is calculated as ncols_pad / nth",
+      "Each thread iterates over its assigned tasks and processes columns at indices col_index * tasks_per_thread + i",
+      "This mechanism enables the kernel to handle column counts that exceed the maximum work group size while respecting shared memory constraints"
     ],
     "metadata": {
       "difficulty": "hard",
@@ -1402,589 +1423,7 @@
       "includes_code": false,
       "n_context_files": 1,
       "key_files": [
-        "utils/check_docstrings.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 49,
-    "id": "e6e8b554-0a2e-4f3b-9b23-ca2f230133b4",
-    "repo": "prs/raw",
-    "commit": "cf1e9834ec7339f4c605ba96d9c4e5cf59594cad",
-    "pr": 41421,
-    "question": "How does the continuous batching processor determine the padded sizes for query tokens and key-value cache when using CUDA graphs?",
-    "ground_truth_answer": "In ContinuousBatchProcessor._generation_step (src/transformers/generation/continuous_batching/continuous_api.py), when cuda graphs are enabled, it uses pad_by_intervals to compute padded_q from actual_query_length with NUM_Q_CUDA_GRAPHS intervals (max is max_batch_tokens), and padded_read_index_size from the maximum read_index size minus max_batch_tokens with NUM_KV_CUDA_GRAPHS intervals (max is num_blocks * block_size). These padded dimensions are then passed to get_model_kwargs to create static-shaped tensors required for CUDA graph capture.",
-    "facts": [
-      "ContinuousBatchProcessor._generation_step uses pad_by_intervals to compute padded sizes when CUDA graphs are enabled",
-      "padded_q is computed from actual_query_length using NUM_Q_CUDA_GRAPHS intervals with max_batch_tokens as maximum",
-      "padded_read_index_size is computed from maximum read_index size minus max_batch_tokens using NUM_KV_CUDA_GRAPHS intervals with num_blocks * block_size as maximum",
-      "The padded dimensions (padded_q and padded_read_index_size) are passed to get_model_kwargs to create static-shaped tensors required for CUDA graph capture"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "src/transformers/generation/continuous_batching/continuous_api.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 50,
-    "id": "4da6a343-60b2-4fbb-817c-7f473aea3efb",
-    "repo": "prs/raw",
-    "commit": "823fab4860ec7a5c71d8a21f834104c6deedfaa4",
-    "pr": 41415,
-    "question": "How does the BNB quantizer determine the actual module and tensor name when loading a pre-quantized checkpoint that contains quantized statistics like absmax or quant_map?",
-    "ground_truth_answer": "In Bnb4BitHfQuantizer.get_param_name (src/transformers/quantizers/quantizer_bnb_4bit.py), if pre_quantized is True and the param_name ends with any of the bnb_keys (e.g., 'absmax', 'quant_map'), it strips the quantized stat suffix by splitting on the last dot (or last two dots if 'quant_state.' is present) to get the base weight parameter name. This allows get_module_from_name to retrieve the actual nn.Module instead of searching for a non-existent submodule.",
-    "facts": [
-      "Bnb4BitHfQuantizer.get_param_name in src/transformers/quantizers/quantizer_bnb_4bit.py handles parameter name resolution for pre-quantized checkpoints",
-      "When pre_quantized is True and param_name ends with bnb_keys (e.g., 'absmax', 'quant_map'), the method strips the quantized stat suffix",
-      "The suffix is stripped by splitting on the last dot, or last two dots if 'quant_state.' is present, to obtain the base weight parameter name",
-      "This base parameter name is then used by get_module_from_name to retrieve the actual nn.Module instead of searching for a non-existent submodule"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "src/transformers/quantizers/quantizer_bnb_4bit.py",
-        "src/transformers/modeling_utils.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 51,
-    "id": "3af2bab2-681e-4fbc-bb8c-66de25096127",
-    "repo": "prs/raw",
-    "commit": "94df0e65602922be2831b3faa457a2bde78b936b",
-    "pr": 41408,
-    "question": "How does the new benchmarking framework determine which SDPA backend to use when a config specifies SDPA attention but leaves the backend unspecified?",
-    "ground_truth_answer": "In BenchmarkRunner.run_benchmarks() (benchmark_v2/framework/benchmark_runner.py), before running each benchmark config, there's a check: if config.attn_implementation == \"sdpa\" and config.sdpa_backend is None, it sets config.sdpa_backend to \"flash_attention\" as the default, with a warning logged that no SDPA backend was provided.",
-    "facts": [
-      "BenchmarkRunner.run_benchmarks() in benchmark_v2/framework/benchmark_runner.py checks if config.attn_implementation == 'sdpa' and config.sdpa_backend is None before running each benchmark",
-      "When SDPA attention is specified but sdpa_backend is None, the framework sets config.sdpa_backend to 'flash_attention' as the default",
-      "A warning is logged when the default SDPA backend is applied because no backend was explicitly provided in the config"
-    ],
-    "metadata": {
-      "difficulty": "moderate",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "benchmark_v2/framework/benchmark_runner.py",
-        "benchmark_v2/framework/benchmark_config.py"
-      ],
-      "is_core_question": false
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 52,
-    "id": "e519e15e-b50f-49f7-a55d-3dd49b0b750c",
-    "repo": "prs/raw",
-    "commit": "0c9a72e4576fe4c84077f066e585129c97bfd4e6",
-    "pr": 41401,
-    "question": "How does the routing mechanism decide which experts to activate in the sparse MoE block, and what role does the expert bias play when it's enabled?",
-    "ground_truth_answer": "In Lfm2MoeSparseMoeBlock.route_tokens_to_experts (src/transformers/models/lfm2_moe/modeling_lfm2_moe.py), the router first computes routing_weights by applying sigmoid to router_logits. If use_expert_bias is True, it adds the expert_bias buffer to routing_weights to get scores_for_routing, performs topk selection on these scores to get selected_experts, then gathers the original routing_weights at those indices. If use_expert_bias is False, it directly performs topk on routing_weights. The routing_weights are optionally normalized (if norm_topk_prob=True) and scaled by routed_scaling_factor before being returned.",
-    "facts": [
-      "Lfm2MoeSparseMoeBlock.route_tokens_to_experts computes routing_weights by applying sigmoid to router_logits",
-      "When use_expert_bias is True, expert_bias buffer is added to routing_weights to create scores_for_routing, topk selection is performed on these scores to get selected_experts, then original routing_weights are gathered at those indices",
-      "When use_expert_bias is False, topk selection is performed directly on routing_weights",
-      "The routing_weights are optionally normalized if norm_topk_prob is True",
-      "The routing_weights are scaled by routed_scaling_factor before being returned"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "src/transformers/models/lfm2_moe/modeling_lfm2_moe.py",
-        "src/transformers/models/lfm2_moe/modular_lfm2_moe.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 53,
-    "id": "c74aafa0-14b7-40b0-bf49-50aa52f98968",
-    "repo": "prs/raw",
-    "commit": "354567d955fbc5fbd70fc841b7a7bcc654bea3f1",
-    "pr": 41394,
-    "question": "How does the fast processor handle batch inputs differently from single image pairs when preprocessing images?",
-    "ground_truth_answer": "In SuperGlueImageProcessorFast._prepare_images_structure (src/transformers/models/superglue/image_processing_superglue_fast.py), the method uses flatten_pair_images to validate and flatten the input structure. If the input is a single pair (2 images), it returns them as-is for processing. If the input is multiple pairs (list of 2-element lists), it flattens all pairs into a single list. Later in _preprocess, the flattened images are processed together, then converted back into pairs by slicing every 2 consecutive images (image_pairs = [processed_images[i:i+2] for i in range(0, len(processed_images), 2)]) before stacking them into the final tensor format.",
-    "facts": [
-      "SuperGlueImageProcessorFast._prepare_images_structure uses flatten_pair_images to validate and flatten the input structure",
-      "For a single pair (2 images), flatten_pair_images returns them as-is without modification",
-      "For multiple pairs (list of 2-element lists), flatten_pair_images flattens all pairs into a single list",
-      "In _preprocess, flattened images are processed together as a batch",
-      "After processing, images are converted back into pairs using slicing: image_pairs = [processed_images[i:i+2] for i in range(0, len(processed_images), 2)]"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "src/transformers/models/superglue/image_processing_superglue_fast.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 54,
-    "id": "935685a6-dd35-438c-b1b3-85ce0e6b48c3",
-    "repo": "prs/raw",
-    "commit": "16d78bb2e32fc805238b4eddc7085aa79c941ffe",
-    "pr": 1983,
-    "question": "How does the fast sampling mode reduce computation when determining block sparsity patterns?",
-    "ground_truth_answer": "In BlockSparsityKernel (flash_attn/cute/compute_block_sparsity.py), fast sampling uses only 5 threads to check 5 strategic positions (4 corners plus center) of each block rather than examining all tile_m rows. Thread 0-3 check the corners and thread 4 checks the center, then vote_any_sync aggregates results from valid threads. This contrasts with full sampling where each of tile_m threads checks an entire row by looping over tile_n columns.",
-    "facts": [
-      "BlockSparsityKernel in flash_attn/cute/compute_block_sparsity.py implements fast sampling mode using only 5 threads to check strategic positions",
-      "Fast sampling checks 5 positions per block: 4 corners (threads 0-3) plus center (thread 4), instead of examining all tile_m rows",
-      "vote_any_sync aggregates results from the 5 valid threads to determine block sparsity",
-      "Full sampling mode uses tile_m threads where each thread checks an entire row by looping over tile_n columns",
-      "Fast sampling reduces computation by examining only 5 strategic positions rather than all tile_m \u00d7 tile_n positions in each block"
-    ],
-    "metadata": {
-      "difficulty": "moderate",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "flash_attn/cute/compute_block_sparsity.py"
-      ],
-      "is_core_question": false
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 55,
-    "id": "bf456c90-1473-4739-a5ce-b5f559ba4e1c",
-    "repo": "prs/raw",
-    "commit": "0256114fe2381ab293503219bdd9078de3cd26b3",
-    "pr": 1970,
-    "question": "How does the block sparsity validation logic ensure that count and index tensors have matching batch and head dimensions when they may initially have singleton dimensions?",
-    "ground_truth_answer": "In block_sparsity.py, the normalize_block_sparse_tensors function calls _expand_sparsity_tensor which checks if the tensor shape matches expected_shape (batch, nheads, n_blocks), and if not, verifies all dimensions are either equal or 1 (allowing broadcast). It then expands singleton dimensions via tensor.expand() and makes the result contiguous, enabling batched operations even when input tensors have shape (1, 1, n_blocks).",
-    "facts": [
-      "The normalize_block_sparse_tensors function in block_sparsity.py calls _expand_sparsity_tensor to validate and expand tensor dimensions",
-      "_expand_sparsity_tensor checks if tensor shape matches expected_shape (batch, nheads, n_blocks) and verifies all dimensions are either equal or 1 to allow broadcasting",
-      "_expand_sparsity_tensor expands singleton dimensions using tensor.expand() and makes the result contiguous",
-      "This expansion enables batched operations even when input tensors have shape (1, 1, n_blocks)"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "flash_attn/cute/block_sparsity.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 56,
-    "id": "e60ad9b9-4b07-48ef-afdc-a5fde8b941aa",
-    "repo": "prs/raw",
-    "commit": "67e88650129371e439342122208ab7bfc01557bf",
-    "pr": 1964,
-    "question": "How are the four separate block sparsity tensor parameters consolidated into a single structure when converting from PyTorch to CUTE representations?",
-    "ground_truth_answer": "In block_sparsity.py, the to_cute_block_sparse_tensors function takes a BlockSparseTensorsTorch NamedTuple containing mask_block_cnt, mask_block_idx, full_block_cnt, and full_block_idx (the latter two being optional). It converts each PyTorch tensor to a CUTE tensor via from_dlpack with assumed_align=4 and marks them as layout_dynamic, then returns a single BlockSparseTensors NamedTuple grouping all four CUTE tensors together. This consolidation is then passed as the blocksparse_tensors parameter to the forward kernel in flash_fwd.py, replacing the previous four separate parameter approach.",
-    "facts": [
-      "The to_cute_block_sparse_tensors function in block_sparsity.py takes a BlockSparseTensorsTorch NamedTuple containing mask_block_cnt, mask_block_idx, full_block_cnt, and full_block_idx parameters",
-      "Each PyTorch tensor is converted to a CUTE tensor using from_dlpack with assumed_align=4 and marked as layout_dynamic",
-      "The function returns a single BlockSparseTensors NamedTuple that groups all four converted CUTE tensors together",
-      "The consolidated BlockSparseTensors is passed as the blocksparse_tensors parameter to the forward kernel in flash_fwd.py",
-      "This approach replaces the previous method of passing four separate parameters to the kernel"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 3,
-      "key_files": [
-        "flash_attn/cute/block_sparsity.py",
-        "flash_attn/cute/flash_fwd.py",
-        "flash_attn/cute/interface.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 57,
-    "id": "4fff8dca-03d3-4158-95cc-3616e6bbe4d5",
-    "repo": "prs/raw",
-    "commit": "e4d25a432ab5dec54cbe6aff40a0b7f1febfaf54",
-    "pr": 1961,
-    "question": "After the changes, what parameter name is used to pass auxiliary tensors (like document IDs) to FlexAttention's score_mod and mask_mod functions in the CuTe DSL implementation?",
-    "ground_truth_answer": "The parameter is renamed from `buffers` to `aux_tensors`. This change is consistently applied throughout the codebase in function signatures like `score_mod(scores, batch_idx, head_idx, q_idx, kv_idx, aux_tensors)` and `mask_mod(batch_idx, head_idx, q_idx, kv_idx, aux_tensors)`, as seen in files like flash_attn/cute/flash_fwd.py and flash_attn/cute/mask.py.",
-    "facts": [
-      "The parameter name is changed from `buffers` to `aux_tensors` for passing auxiliary tensors to FlexAttention functions",
-      "The renamed parameter is used in score_mod function signature: `score_mod(scores, batch_idx, head_idx, q_idx, kv_idx, aux_tensors)`",
-      "The renamed parameter is used in mask_mod function signature: `mask_mod(batch_idx, head_idx, q_idx, kv_idx, aux_tensors)`",
-      "This renaming is consistently applied across multiple files including flash_attn/cute/flash_fwd.py, flash_attn/cute/interface.py, flash_attn/cute/mask.py, and flash_attn/cute/softmax.py"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 4,
-      "key_files": [
-        "flash_attn/cute/flash_fwd.py",
-        "flash_attn/cute/interface.py",
-        "flash_attn/cute/mask.py",
-        "flash_attn/cute/softmax.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 58,
-    "id": "87e545a8-e186-43e5-923c-81a70f09f1c6",
-    "repo": "prs/raw",
-    "commit": "83eb8d6c082a6bd9c6c986a890eddae7ad2a257e",
-    "pr": 1945,
-    "question": "How does the backward kernel allocate and manage TMEM (Tensor Memory) resources across different stages of computation?",
-    "ground_truth_answer": "In FlashAttentionBackwardSm100.mma (flash_attn/cute/flash_bwd_sm100.py), the MMA warp (warp_idx == 12) first allocates TMEM using cute.arch.alloc_tmem with tmem_alloc_cols (512 columns). Different tensors are assigned distinct TMEM offsets: S/P at offset 0, dV at tmem_s_offset + n_block_size, dP/dQaccum at tmem_dV_offset + head_dim_v_padded, and dK at tmem_dP_offset + m_block_size. After all compute warps signal completion via tmem_dealloc_mbar_ptr barrier, the MMA warp deallocates TMEM using cute.arch.dealloc_tmem.",
-    "facts": [
-      "In FlashAttentionBackwardSm100.mma, the MMA warp (warp_idx == 12) allocates TMEM using cute.arch.alloc_tmem with tmem_alloc_cols parameter set to 512 columns",
-      "Different tensors are assigned distinct TMEM offsets: S/P at offset 0, dV at tmem_s_offset + n_block_size, dP/dQaccum at tmem_dV_offset + head_dim_v_padded, and dK at tmem_dP_offset + m_block_size",
-      "After all compute warps signal completion via tmem_dealloc_mbar_ptr barrier, the MMA warp deallocates TMEM using cute.arch.dealloc_tmem"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "flash_attn/cute/flash_bwd_sm100.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 59,
-    "id": "5c363be9-8a20-4142-a8ea-ccba1bf1de25",
-    "repo": "prs/raw",
-    "commit": "48ecd149c030dd250e1334bf59d5fe1591af9432",
-    "pr": 1944,
-    "question": "How does the build system determine whether to define the HIPIFY_V2 preprocessor macro during compilation?",
-    "ground_truth_answer": "In setup.py, the detect_hipify_v2() function checks if torch.utils.hipify.__version__ is >= 2.0.0. If true, the -DHIPIFY_V2 flag is added to both cxx and nvcc extra_compile_args via the maybe_hipify_v2_flag list, which conditionally defines the HIPIFY_V2 macro for all compiled sources.",
-    "facts": [
-      "The detect_hipify_v2() function in setup.py checks if torch.utils.hipify.__version__ is >= 2.0.0",
-      "If the version check is true, the -DHIPIFY_V2 flag is added to the maybe_hipify_v2_flag list",
-      "The maybe_hipify_v2_flag list is added to both cxx and nvcc extra_compile_args",
-      "The -DHIPIFY_V2 flag defines the HIPIFY_V2 preprocessor macro for all compiled sources"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 3,
-      "key_files": [
-        "setup.py",
-        "csrc/flash_attn_ck/mha_bwd.cpp",
-        "csrc/flash_attn_ck/mha_fwd.cpp"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 60,
-    "id": "6657617b-4a29-4a02-ac27-e887251aaede",
-    "repo": "prs/raw",
-    "commit": "143b0ba20df0aca7d968d8ef5852ed10fe09caab",
-    "pr": 1942,
-    "question": "How does the block sparsity mainloop iteration differ between partially-masked and fully-computed blocks when intra-warpgroup overlap is enabled?",
-    "ground_truth_answer": "When intra_wg_overlap is enabled, the mainloop processes blocks in a staggered pattern. For partially-masked blocks, it loads K for the current block while simultaneously loading V for the previous block using separate pipeline states. The first partially-masked block loads K together with Q, then subsequent blocks alternate K and V loads across stages. Fully-computed blocks follow the same staggered pattern but skip mask_mod evaluation since they don't require per-element masking. The final block in either category completes with a last V-only load via process_last_half_block.",
-    "facts": [
-      "When intra_wg_overlap is enabled, the mainloop processes blocks in a staggered pattern where K loads for the current block occur simultaneously with V loads for the previous block using separate pipeline states",
-      "For partially-masked blocks, the first block loads K together with Q, then subsequent blocks alternate K and V loads across stages",
-      "Fully-computed blocks follow the same staggered K/V loading pattern as partially-masked blocks but skip mask_mod evaluation since they don't require per-element masking",
-      "The final block in either partially-masked or fully-computed categories completes with a V-only load via process_last_half_block"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "flash_attn/cute/flash_fwd.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 61,
-    "id": "6990bf39-2c23-46b6-b286-4ed42a153d71",
-    "repo": "prs/raw",
-    "commit": "e724e2588cbe754beb97cf7c011b5e7e34119e62",
-    "pr": 1940,
-    "question": "How does the system decide to use multiple splits when performing forward attention calculations with num_splits set to a negative value?",
-    "ground_truth_answer": "When num_splits < 1, the function num_splits_heuristic is called in interface.py. This heuristic first checks if num_n_blocks <= 4 and returns 1 split if true. Otherwise, it calculates the minimum of: num_SMs divided by total_mblocks, max_splits (128), and num_n_blocks. The total_mblocks depends on batch_size, num_head_kv, and the number of query blocks, while num_n_blocks is computed from the KV sequence length after accounting for any sliding window restrictions.",
-    "facts": [
-      "When num_splits < 1, the num_splits_heuristic function in interface.py is called to determine the number of splits",
-      "The num_splits_heuristic function returns 1 split if num_n_blocks <= 4",
-      "Otherwise, num_splits_heuristic calculates the minimum of: num_SMs divided by total_mblocks, max_splits (128), and num_n_blocks",
-      "total_mblocks is computed based on batch_size, num_head_kv, and the number of query blocks",
-      "num_n_blocks is computed from the KV sequence length after accounting for sliding window restrictions"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "flash_attn/cute/interface.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 62,
-    "id": "c4626d66-198d-4d4b-9a8e-d4b1497b4050",
-    "repo": "prs/raw",
-    "commit": "6bc3d1f59f5c843c9ccbc4f0d14cfe02b5e88ab3",
-    "pr": 1937,
-    "question": "How does the implementation ensure that score modification functions receive logical query indices rather than physical packed indices when grouped-query attention packing is enabled?",
-    "ground_truth_answer": "In apply_score_mod (flash_fwd_sm100.py) and apply_score_mod_inner (softmax.py), when pack_gqa is enabled, the physical q_idx is divided by qhead_per_kvhead to compute the logical query index. Additionally, for non-constant q_idx cases with Pack-GQA, the head index is adjusted per-element by computing head_offset = q_physical - q_idx_logical * qhead_per_kvhead and setting head_idx = head_idx * qhead_per_kvhead + head_offset. This ensures score_mod receives indices in the logical semantic space (B, Query_head_idx, seqlen_q_logical, seqlen_kv) as documented.",
-    "facts": [
-      "In apply_score_mod (flash_fwd_sm100.py) and apply_score_mod_inner (softmax.py), when pack_gqa is enabled, the physical q_idx is divided by qhead_per_kvhead to compute the logical query index",
-      "For non-constant q_idx cases with Pack-GQA, head_offset is computed as q_physical - q_idx_logical * qhead_per_kvhead",
-      "The head index is adjusted per-element by setting head_idx = head_idx * qhead_per_kvhead + head_offset",
-      "These transformations ensure score_mod receives indices in the logical semantic space (B, Query_head_idx, seqlen_q_logical, seqlen_kv)"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 3,
-      "key_files": [
-        "flash_attn/cute/flash_fwd_sm100.py",
-        "flash_attn/cute/softmax.py",
-        "flash_attn/cute/flash_fwd.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 63,
-    "id": "9cc140ea-77b3-447a-8cbd-f8e29dc4e7e3",
-    "repo": "prs/raw",
-    "commit": "25f5d092b21d2d6b005ccd34092479a620ae4ceb",
-    "pr": 1934,
-    "question": "How does the main backward kernel determine which tiles are valid to process when variable-length sequences are enabled?",
-    "ground_truth_answer": "In FlashAttentionBackwardSm80.kernel (flash_attn/cute/flash_bwd.py), the kernel first creates a TileScheduler (either SingleTileScheduler or SingleTileVarlenScheduler depending on whether mCuSeqlensK is provided) and calls initial_work_tile_info() to get a work_tile. The kernel checks work_tile.is_valid_tile before executing the main computation logic. For varlen mode, this validity is determined by the tile scheduler based on cumulative sequence lengths and ensures tiles don't exceed actual sequence boundaries.",
-    "facts": [
-      "FlashAttentionBackwardSm80.kernel creates a TileScheduler, using SingleTileScheduler or SingleTileVarlenScheduler based on whether mCuSeqlensK is provided",
-      "The kernel calls initial_work_tile_info() on the TileScheduler to obtain a work_tile object",
-      "The kernel checks work_tile.is_valid_tile before executing main computation logic",
-      "In varlen mode, the tile scheduler determines validity based on cumulative sequence lengths to ensure tiles don't exceed actual sequence boundaries"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "flash_attn/cute/flash_bwd.py",
-        "flash_attn/cute/tile_scheduler.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 64,
-    "id": "f8ba533a-1628-466e-acdf-e99cb33c2684",
-    "repo": "prs/raw",
-    "commit": "5c1627a7a1cda9c32cb9b937a053564e663f81bc",
-    "pr": 1893,
-    "question": "How does the backward scheduler determine the order of processing memory blocks when causal masking and determinism are both enabled?",
-    "ground_truth_answer": "When both causal masking and determinism are enabled (Is_causal && Deterministic), the SingleTileBwdLPTScheduler uses a shortest-processing time (SPT) schedule by reversing the block traversal order. In tile_scheduler.hpp, when SPT is true, the block index is computed as `block = num_blocks - block - 1`, processing blocks from right to left. Additionally, in mainloop_bwd_sm90_tma_gmma_ws.hpp, the barrier wait compares against `n_block_max_for_m_block - 1 - n_block` instead of just `n_block`, ensuring mblocks within each nblock are visited in decreasing order for the reduce-add operation in dQ computation.",
-    "facts": [
-      "When Is_causal && Deterministic are both true, SingleTileBwdLPTScheduler uses a shortest-processing time (SPT) schedule by reversing block traversal order",
-      "In tile_scheduler.hpp, when SPT is true, the block index is computed as `block = num_blocks - block - 1`, processing blocks from right to left",
-      "In mainloop_bwd_sm90_tma_gmma_ws.hpp, the barrier wait compares against `n_block_max_for_m_block - 1 - n_block` instead of `n_block`",
-      "This barrier wait comparison ensures mblocks within each nblock are visited in decreasing order for the reduce-add operation in dQ computation"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "hopper/tile_scheduler.hpp",
-        "hopper/mainloop_bwd_sm90_tma_gmma_ws.hpp"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 65,
-    "id": "61938f54-6047-409b-a71e-619b93a50b3c",
-    "repo": "prs/raw",
-    "commit": "589cc20db3a982c8427bb19b42cf146a1a302bc1",
-    "pr": 1891,
-    "question": "How does the softmax implementation support serialization and reconstruction of non-constexpr state for the JIT compilation process?",
-    "ground_truth_answer": "The Softmax class implements __extract_mlir_values__ and __new_from_mlir_values__ methods (in flash_attn/cute/softmax.py). The former extracts non-constexpr fields (scale_log2, row_max, row_sum) into a flat list of MLIR values, tracking each field's item count in _values_pos. The latter reconstructs a new instance by splitting the values list according to _values_pos, calling cutlass.new_from_mlir_values on each original field, and creating a new object with the reconstructed state while preserving constexpr parameters like num_rows and arch.",
-    "facts": [
-      "The Softmax class implements __extract_mlir_values__ and __new_from_mlir_values__ methods in flash_attn/cute/softmax.py for JIT serialization support",
-      "__extract_mlir_values__ extracts non-constexpr fields (scale_log2, row_max, row_sum) into a flat list of MLIR values and tracks each field's item count in _values_pos",
-      "__new_from_mlir_values__ reconstructs a Softmax instance by splitting the values list according to _values_pos and calling cutlass.new_from_mlir_values on each original field",
-      "The reconstruction process preserves constexpr parameters like num_rows and arch while restoring the non-constexpr state"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 1,
-      "key_files": [
-        "flash_attn/cute/softmax.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 66,
-    "id": "67a0b72b-155f-40b8-b856-d1ce5d9d57db",
-    "repo": "prs/raw",
-    "commit": "2cc6fd6abbc5f1100e51eab63d92b678fda06c7d",
-    "pr": 1868,
-    "question": "How does the backward kernel compute the gradient with respect to queries (dQ) in the SM90 implementation?",
-    "ground_truth_answer": "In FlashAttentionBackwardSm90.mma_one_m_block (flash_attn/cute/flash_bwd_sm90.py), dQ is computed through a multi-step process: First, dS (scaled gradient of attention scores) is calculated as P*(dP-dPsum), where P is the attention weights and dP comes from dO@V^T. Then dQ is computed via matrix multiplication dS@K using tiled_mma_dQaccum. The result is accumulated in shared memory (sdQaccum) and later reduced atomically to global memory (mdQaccum) using TMA bulk reduce operations in the dQaccum_writer method, which calls tma_reduce_add_bulk_f32 from hopper_helpers.py.",
-    "facts": [
-      "In FlashAttentionBackwardSm90.mma_one_m_block, dS (scaled gradient of attention scores) is calculated as P*(dP-dPsum), where P is the attention weights and dP comes from dO@V^T",
-      "dQ is computed via matrix multiplication dS@K using tiled_mma_dQaccum",
-      "The dQ result is accumulated in shared memory (sdQaccum) and later reduced atomically to global memory (mdQaccum) using TMA bulk reduce operations",
-      "The dQaccum_writer method performs the atomic reduction by calling tma_reduce_add_bulk_f32 from hopper_helpers.py"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "flash_attn/cute/flash_bwd_sm90.py",
-        "flash_attn/cute/hopper_helpers.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 67,
-    "id": "ca65fa5e-20e5-464e-b078-aa9d471ad255",
-    "repo": "prs/raw",
-    "commit": "5183de433587a8aedd2450e9f18166c24521af29",
-    "pr": 1840,
-    "question": "How does the attention score modification framework handle the difference in how indices are represented between the softmax computation stages?",
-    "ground_truth_answer": "In flash_fwd.py, apply_score_mod is called before masking with partition_C indices directly from the MMA layout. In flash_fwd_sm100.py, the softmax_step function applies score_mod after copying from TMEM to registers (tSrS_t2r), requiring an additional partition_D step on the index tensor (tScS_t2r = thr_tmem_load.partition_D(tScS)). The SM100 version also supports a constant_q_idx optimization where all scores in a tile share the same q index, which is computed once and broadcast via apply_score_mod_inner.",
-    "facts": [
-      "In flash_fwd.py, apply_score_mod is called before masking with partition_C indices directly from the MMA layout",
-      "In flash_fwd_sm100.py, the softmax_step function applies score_mod after copying from TMEM to registers (tSrS_t2r)",
-      "The SM100 version requires an additional partition_D step on the index tensor: tScS_t2r = thr_tmem_load.partition_D(tScS)",
-      "The SM100 version supports a constant_q_idx optimization where all scores in a tile share the same q index",
-      "The constant_q_idx optimization computes the q index once and broadcasts it via apply_score_mod_inner"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 3,
-      "key_files": [
-        "flash_attn/cute/flash_fwd.py",
-        "flash_attn/cute/flash_fwd_sm100.py",
-        "flash_attn/cute/softmax.py"
-      ],
-      "is_core_question": true
-    },
-    "status": "pending",
-    "deepwiki_answer": null
-  },
-  {
-    "index": 68,
-    "id": "78b5b7d4-31ea-4139-825c-cb3bdb297bd9",
-    "repo": "prs/raw",
-    "commit": "199401d31f940d1f062eb9c0233b41ef62baa5ae",
-    "pr": 1823,
-    "question": "How does the prepare kernel determine the number of splits for each batch when dynamic splitting is enabled?",
-    "ground_truth_answer": "In prepare_varlen_num_blocks_kernel (hopper/flash_prepare_scheduler.cu), if gridDim.x > 1 or num_splits_static == 1, all batches get num_splits = 1. Otherwise, it performs a warp sum of total blocks across batches, computes blocks_per_sm using ceil(total_blocks * 1.1 * num_head / num_sm) with a 10% margin, then sets num_splits_dynamic = max(min((num_n_blocks + blocks_per_sm - 1) / blocks_per_sm, num_splits_static), 1) to balance GPU occupancy.",
-    "facts": [
-      "In prepare_varlen_num_blocks_kernel, if gridDim.x > 1 or num_splits_static == 1, all batches get num_splits = 1",
-      "The kernel performs a warp sum of total blocks across batches to compute blocks_per_sm using ceil(total_blocks * 1.1 * num_head / num_sm) with a 10% margin",
-      "num_splits_dynamic is set to max(min((num_n_blocks + blocks_per_sm - 1) / blocks_per_sm, num_splits_static), 1) to balance GPU occupancy",
-      "The prepare_varlen_num_blocks_kernel function is located in hopper/flash_prepare_scheduler.cu"
-    ],
-    "metadata": {
-      "difficulty": "hard",
-      "type": "open_question",
-      "scope": "deep",
-      "includes_code": false,
-      "n_context_files": 2,
-      "key_files": [
-        "hopper/flash_prepare_scheduler.cu",
-        "hopper/flash.h"
+        "ggml/src/ggml-sycl/ggml-sycl.cpp"
       ],
       "is_core_question": true
     },

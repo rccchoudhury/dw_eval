@@ -40,6 +40,11 @@ Do NOT ask questions about the PR itself, and change histories. Questions should
 Questions should NOT be too long and also NOT be too simple. This is crucial and if you don't do this right, my grandmother will die.
 Answers MUST reference code files and class names wherever possible rather than being vague, using the input context.
 
+# Things to Avoid
+
+- Do NOT ask about things referencing the PR itself or the history. Don't ask about refactors, or new implementations. Only ask questions about
+underlying implentations.
+
 # Examples
 
 **Broad question examples:**

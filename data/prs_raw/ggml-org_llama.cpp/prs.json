@@ -77,13 +77,7 @@
       }
     ],
     "num_files": 8,
-    "scraped_at": "2025-11-16T23:28:52.749732",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial algorithmic and architectural changes to WebGPU matrix multiplication operations. It implements two distinct optimization strategies (register tiling and subgroup matrices), adds support for multiple quantization types, and includes significant shader code modifications with detailed performance metrics. The changes involve non-trivial GPU compute logic that would require developers to understand optimization techniques and WebGPU's computation model.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:28:52.749732"
   },
   {
     "pr_number": 17022,
@@ -139,13 +133,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:28:53.872236",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial feature (bicubic interpolation) across multiple GPU backends (CUDA, Vulkan) with clear mathematical algorithms, interpolation logic, and backend integration patterns. The changes involve actual algorithmic implementation rather than simple configuration or cleanup, providing substantial technical context for meaningful codebase questions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:28:53.872236"
   },
   {
     "pr_number": 16993,
@@ -193,13 +181,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:28:58.244859",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds non-trivial optimized kernels for Q8_0 quantization in KleidiAI, involving integration of multiple NEON, i8mm, and SME2 micro-kernels with accompanying packing functions. The changes demonstrate significant performance improvements (2.6-5.9x speedup on single-thread operations) and involve architectural decisions about kernel selection and context management that would benefit from technical questions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:28:58.244859"
   },
   {
     "pr_number": 16988,
@@ -271,13 +253,7 @@
       }
     ],
     "num_files": 7,
-    "scraped_at": "2025-11-16T23:28:59.356006",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR fixes a critical bug in CUDA kernel selection logic by adding stride validation checks. The changes involve non-trivial logic modifications across multiple files to handle memory layout constraints, and developers working on CUDA optimizations or tensor memory management would need to understand why stride validation is essential for kernel selection.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:28:59.356006"
   },
   {
     "pr_number": 16977,
@@ -389,13 +365,63 @@
       }
     ],
     "num_files": 12,
-    "scraped_at": "2025-11-16T23:29:00.537463",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a significant performance optimization by fusing multiple GPU shader operations (rms_norm + mul + rope + view + set_rows) in Vulkan, demonstrating meaningful algorithmic changes with measurable performance improvements (~1-3%) across multiple models. The changes involve new shader implementations, data structure refactoring, and fusion optimization logic that developers would need to understand.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:00.537463"
+  },
+  {
+    "pr_number": 16962,
+    "title": "CUDA: add head size 72 for flash-attn",
+    "body": "This PR adds cases for head size 72, used for Qwen3-VL and Gemma 3 vision encoders. Added only the cases for the tile kernel, like head size 40.\r\nThe parameters for the tile kernel is taken from head size 40, will probably require some optimizations. Tested with `test-backend-ops` on a 3060 and a 4060 Ti. Not tested on AMD, though I have added the cases for AMD.\r\nFixes #16950",
+    "html_url": "https://github.com/ggml-org/llama.cpp/pull/16962",
+    "created_at": "2025-11-03T10:07:35Z",
+    "merged_at": "2025-11-03T13:29:11Z",
+    "merge_commit_sha": "622cd010ff4a65bef67edbf2f9bf4707c01f98f7",
+    "base_ref": "master",
+    "head_sha": "72545ce2bebddc9235b553af01252fbb8443a1ba",
+    "user": "theo77186",
+    "files": [
+      {
+        "filename": "ggml/src/ggml-cuda/fattn-tile.cu",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "patch": "@@ -14,6 +14,10 @@ void ggml_cuda_flash_attn_ext_tile(ggml_backend_cuda_context & ctx, ggml_tensor\n             GGML_ASSERT(V->ne[0] == K->ne[0]);\n             ggml_cuda_flash_attn_ext_tile_case< 64,  64>(ctx, dst);\n         } break;\n+        case  72: {\n+            GGML_ASSERT(V->ne[0] == K->ne[0]);\n+            ggml_cuda_flash_attn_ext_tile_case< 72,  72>(ctx, dst);\n+        } break;\n         case  80: {\n             GGML_ASSERT(V->ne[0] == K->ne[0]);\n             ggml_cuda_flash_attn_ext_tile_case< 80,  80>(ctx, dst);"
+      },
+      {
+        "filename": "ggml/src/ggml-cuda/fattn-tile.cuh",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 2,
+        "changes": 31,
+        "patch": "@@ -6,7 +6,7 @@\n // nbatch_K == number of K columns to load in parallel for KQ calculation\n \n // TODO optimize kernel parameters for FP16 NVIDIA (P100)\n-// TODO optimize kernel parameters for head sizes 40, 80, 96, 112\n+// TODO optimize kernel parameters for head sizes 40, 72, 80, 96, 112\n \n // The ROCm compiler cannot handle templating in __launch_bounds__.\n // As a workaround, define a macro to package the kernel parameters as uint32_t:\n@@ -32,6 +32,12 @@ static constexpr __host__ __device__ uint32_t ggml_cuda_fattn_tile_get_config_nv\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 16, 256, 2,  64,  64)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 32, 256, 2,  64,  64)\n \n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  2,  64, 2,  64,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  4, 128, 2,  64,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  8, 256, 2,  64,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 16, 256, 2,  64,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 32, 256, 2,  64,  72)\n+\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  2,  64, 2,  64,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  4, 128, 2,  64,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  8, 256, 2,  64,  40)\n@@ -80,6 +86,12 @@ static constexpr __host__ __device__ uint32_t ggml_cuda_fattn_tile_get_config_nv\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 16, 128, 3,  64,  64)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 32, 256, 2,  64,  64)\n \n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  2,  64, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  4, 128, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  8, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 16, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 32, 256, 2,  32,  72)\n+\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  2,  64, 2,  32,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  4, 128, 2,  32,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  8, 256, 2,  32,  40)\n@@ -130,6 +142,13 @@ static constexpr __host__ __device__ uint32_t ggml_cuda_fattn_tile_get_config_am\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 32, 256, 2,  64,  64)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 64, 256, 2,  64,  64)\n \n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  2,  64, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  4, 128, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  8, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 16, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 32, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 64, 256, 2,  32,  72)\n+\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  2,  64, 2,  32,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  4, 128, 2,  32,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  8, 256, 2,  32,  40)\n@@ -185,6 +204,13 @@ static constexpr __host__ __device__ uint32_t ggml_cuda_fattn_tile_get_config_am\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 32, 128, 4,  64,  64)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 64,  64, 64, 128, 5,  64,  64)\n \n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  2,  64, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  4, 128, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72,  8, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 16, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 32, 256, 2,  32,  72)\n+    GGML_CUDA_FATTN_TILE_CONFIG_CASE( 72,  72, 64, 256, 2,  32,  72)\n+\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  2,  64, 2,  32,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  4, 128, 2,  32,  40)\n     GGML_CUDA_FATTN_TILE_CONFIG_CASE( 80,  80,  8, 256, 2,  32,  40)\n@@ -723,7 +749,7 @@ static __global__ void flash_attn_tile(\n \n     if (\n #ifdef GGML_USE_WMMA_FATTN\n-            (ncols2 != 1 && DV != 40 && DV != 512) ||\n+            (ncols2 != 1 && DV != 40 && DV != 72 && DV != 512) ||\n #endif // GGML_USE_WMMA_FATTN\n             (use_logit_softcap && !(DV == 128 || DV == 256))\n     ) {\n@@ -1198,6 +1224,7 @@ void ggml_cuda_flash_attn_ext_tile(ggml_backend_cuda_context & ctx, ggml_tensor\n \n extern DECL_FATTN_TILE_CASE( 40,  40);\n extern DECL_FATTN_TILE_CASE( 64,  64);\n+extern DECL_FATTN_TILE_CASE( 72,  72);\n extern DECL_FATTN_TILE_CASE( 80,  80);\n extern DECL_FATTN_TILE_CASE( 96,  96);\n extern DECL_FATTN_TILE_CASE(112, 112);"
+      },
+      {
+        "filename": "ggml/src/ggml-cuda/fattn.cu",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "patch": "@@ -223,6 +223,7 @@ static best_fattn_kernel ggml_cuda_get_best_fattn_kernel(const int device, const\n     switch (K->ne[0]) {\n         case  40:\n         case  64:\n+        case  72:\n         case  80:\n         case  96:\n         case 128:\n@@ -275,7 +276,7 @@ static best_fattn_kernel ggml_cuda_get_best_fattn_kernel(const int device, const\n     const bool can_use_vector_kernel = Q->ne[0] <= 256 && Q->ne[0] % 64 == 0 && K->ne[1] % FATTN_KQ_STRIDE == 0;\n \n     // If Turing tensor cores available, use them:\n-    if (turing_mma_available(cc) && K->ne[1] % FATTN_KQ_STRIDE == 0 && Q->ne[0] != 40) {\n+    if (turing_mma_available(cc) && K->ne[1] % FATTN_KQ_STRIDE == 0 && Q->ne[0] != 40 && Q->ne[0] != 72) {\n         if (can_use_vector_kernel) {\n             if (!ggml_is_quantized(K->type) && !ggml_is_quantized(V->type)) {\n                 if (cc >= GGML_CUDA_CC_ADA_LOVELACE && Q->ne[1] == 1 && Q->ne[3] == 1 && !(gqa_ratio > 4 && K->ne[1] >= 8192)) {\n@@ -301,7 +302,7 @@ static best_fattn_kernel ggml_cuda_get_best_fattn_kernel(const int device, const\n     }\n \n     // Use the WMMA kernel if possible:\n-    if (ggml_cuda_should_use_wmma_fattn(cc) && K->ne[1] % FATTN_KQ_STRIDE == 0 && Q->ne[0] != 40 && Q->ne[0] != 576) {\n+    if (ggml_cuda_should_use_wmma_fattn(cc) && K->ne[1] % FATTN_KQ_STRIDE == 0 && Q->ne[0] != 40 && Q->ne[0] != 72 && Q->ne[0] != 576) {\n         if (can_use_vector_kernel && Q->ne[1] <= 2) {\n             return BEST_FATTN_KERNEL_VEC;\n         }"
+      },
+      {
+        "filename": "ggml/src/ggml-cuda/template-instances/fattn-tile-instance-dkq72-dv72.cu",
+        "status": "added",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "patch": "@@ -0,0 +1,5 @@\n+// This file has been autogenerated by generate_cu_files.py, do not edit manually.\n+\n+#include \"../fattn-tile.cuh\"\n+\n+DECL_FATTN_TILE_CASE(72, 72);"
+      },
+      {
+        "filename": "ggml/src/ggml-cuda/template-instances/generate_cu_files.py",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "patch": "@@ -3,7 +3,7 @@\n from glob import glob\n import os\n \n-HEAD_SIZES_KQ = [40, 64, 80, 96, 112, 128, 256, 576]\n+HEAD_SIZES_KQ = [40, 64, 72, 80, 96, 112, 128, 256, 576]\n \n TYPES_KV = [\"GGML_TYPE_F16\", \"GGML_TYPE_Q4_0\", \"GGML_TYPE_Q4_1\", \"GGML_TYPE_Q5_0\", \"GGML_TYPE_Q5_1\", \"GGML_TYPE_Q8_0\"]\n \n@@ -81,6 +81,8 @@ def get_short_name(long_quant_name):\n             for head_size_kq in HEAD_SIZES_KQ:\n                 if head_size_kq == 40:\n                     continue\n+                if head_size_kq == 72:\n+                    continue\n                 if head_size_kq != 576 and ncols2 == 16:\n                     continue\n                 if head_size_kq == 576 and ncols2 != 16:"
+      }
+    ],
+    "num_files": 5,
+    "scraped_at": "2025-11-16T23:29:01.609981"
   },
   {
     "pr_number": 16941,
@@ -491,13 +517,7 @@
       }
     ],
     "num_files": 10,
-    "scraped_at": "2025-11-16T23:29:04.104501",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds support for a new model architecture (openPangu-Embedded) with substantial code changes across multiple files including model registration, tensor mapping, chat template handling, and graph building logic. The changes involve non-trivial architectural decisions about how to integrate a new model type into the codebase, making it suitable for generating questions about model architecture integration patterns.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:04.104501"
   },
   {
     "pr_number": 16928,
@@ -585,13 +605,7 @@
       }
     ],
     "num_files": 9,
-    "scraped_at": "2025-11-16T23:29:05.882841",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR introduces meaningful architectural logic by adding a new `n_embd_inp()` method to handle extended embeddings for Qwen3-VL models with DeepStack layers. The changes involve systematic refactoring across multiple files where the new method replaces direct `n_embd` usage, demonstrating a concrete solution to model architecture differences. The PR has sufficient substance to generate questions about how embedding dimensions are calculated, the role of DeepStack layers, and how this change propagates through the encoding/decoding pipeline.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:05.882841"
   },
   {
     "pr_number": 16921,
@@ -671,13 +685,7 @@
       }
     ],
     "num_files": 8,
-    "scraped_at": "2025-11-16T23:29:07.289039",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds meaningful feature support for controlling image token limits in vision models across multiple components (CLI parsing, MTMD API, CLIP processing). The changes involve non-trivial logic integration where user parameters flow through multiple layers of abstraction, and understanding the flow would help developers work with vision model configuration.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:29:07.289039"
   },
   {
     "pr_number": 16906,
@@ -733,13 +741,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:29:09.464776",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds comprehensive support for a new vision-language model (Janus-Pro) to llama.cpp, involving meaningful logic changes across multiple components including tensor mapping, model conversion, vision projector implementation, and GGML graph building. The changes demonstrate architectural decisions about how to integrate a new model type and would provide substantive learning opportunities for understanding multimodal model support.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:09.464776"
   },
   {
     "pr_number": 16901,
@@ -787,13 +789,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:10.324780",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds a meaningful feature (message generation statistics display) with non-trivial UI component changes, state management integration, and configuration logic. The changes involve actual feature implementation with conditional rendering, icon management, and settings integration that developers would need to understand to work on related features.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:29:10.324780"
   },
   {
     "pr_number": 16884,
@@ -841,13 +837,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:13.160334",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial performance optimization by fusing ROPE, VIEW, and SET_ROWS operations in CUDA kernels. It involves meaningful algorithmic changes to the rope kernel signature and behavior, includes conditional logic for operation fusion, and demonstrates understanding of GPU optimization techniques. The changes involve actual logic modifications, not just formatting or configuration updates.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:13.160334"
   },
   {
     "pr_number": 16868,
@@ -895,13 +885,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:15.660103",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial optimization by fusing mul_mat+add and mul_mat_id+add_id operations in Vulkan shaders for the mat-vec multiplication path. The changes involve modifying push constants, shader logic, and GPU pipeline setup with meaningful algorithmic decisions (acknowledging the trade-off with rmsnorm optimization). The description provides clear context about performance impacts and implementation rationale.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:15.660103"
   },
   {
     "pr_number": 16857,
@@ -949,13 +933,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:17.695852",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds a non-trivial CUDA kernel optimization that fuses MoE operations together. It includes meaningful algorithmic implementation, performance benchmarks demonstrating the speedup, and sufficient code context (new kernel implementation, integration logic, and comprehensive tests) that would allow generating substantive questions about kernel fusion, graph optimization, and MoE computation.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:17.695852"
   },
   {
     "pr_number": 16843,
@@ -1003,13 +981,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:21.498664",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds non-trivial CUDA tensor core support for Volta GPUs with significant performance improvements (up to 2.35x speedup). It involves meaningful architectural changes to the MMA tile operations, conditional compilation logic, and kernel dispatching, providing substantial technical content for understanding GPU optimization patterns.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:21.498664"
   },
   {
     "pr_number": 16837,
@@ -1097,13 +1069,7 @@
       }
     ],
     "num_files": 9,
-    "scraped_at": "2025-11-16T23:29:22.315856",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements Flash Attention (FA) support in the CLIP module with meaningful performance and memory improvements (Metal compute buffer reduced from 1132 MB to 121 MB). The changes involve adding support for non-standard head sizes (like Gemma's 72), modifying Metal kernel templates, and integrating flash attention configuration through the parameter system\u2014substantial enough to generate questions about Flash Attention implementation, kernel configuration, and performance optimization.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:29:22.315856"
   },
   {
     "pr_number": 16831,
@@ -1199,13 +1165,7 @@
       }
     ],
     "num_files": 10,
-    "scraped_at": "2025-11-16T23:29:23.823343",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds comprehensive support for the Minimax M2 model architecture across multiple components including model conversion, tensor mapping, vocabulary handling, and the inference engine. It involves non-trivial changes to handle expert gating functions, mixture-of-experts layers, and model-specific tensor definitions, providing sufficient substance for meaningful technical questions about model architecture integration.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:23.823343"
   },
   {
     "pr_number": 16825,
@@ -1269,13 +1229,7 @@
       }
     ],
     "num_files": 6,
-    "scraped_at": "2025-11-16T23:29:25.230594",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial algorithmic and architectural changes to how M-RoPE (multi-token rotary positional embedding) data is stored and managed in the KV cache system. It involves modifications to position handling across multiple components (batch processing, KV cache cells, masking), introduces a new data structure (llama_kv_cell_ext), and addresses specific technical issues with 2D spatial position tracking for multi-modal models. The PR description provides clear context about the problem being solved and the approach taken.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:25.230594"
   },
   {
     "pr_number": 16820,
@@ -1331,13 +1285,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:29:26.609860",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial optimization work to the Hexagon NPU queue and dispatch system with meaningful refactoring of request/response handling logic. The changes demonstrate architectural decisions (eliminating polling, processing responses in-place, removing dedicated read threads) and involve non-trivial modifications to both CPU-side queue management and DSP-side packet processing, providing enough context to generate questions about how the queue system works and why these optimizations matter.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:26.609860"
   },
   {
     "pr_number": 16812,
@@ -1401,13 +1349,7 @@
       }
     ],
     "num_files": 6,
-    "scraped_at": "2025-11-16T23:29:27.964205",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantive architectural changes to KV cache memory management, removing padding logic and simplifying the memory creation process. The changes involve modifying key functions that manage tensor padding and KV cache allocation, with clear explanations of why the padding is no longer needed and how the behavior changes.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:27.964205"
   },
   {
     "pr_number": 16808,
@@ -1463,13 +1405,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:29:28.517519",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial numerical algorithm (RMS_NORM_BACK operation) for the SYCL backend, featuring compensated parallel reduction, hierarchical synchronization patterns, and numerical accuracy considerations. The PR contains sufficient algorithmic complexity and architectural decisions to generate meaningful questions about GPU compute patterns, reduction algorithms, and numerical stability trade-offs.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:28.517519"
   },
   {
     "pr_number": 16800,
@@ -1517,13 +1453,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:30.222394",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a complete new operator (SSM_CONV) for the SYCL backend with non-trivial kernel logic, proper integration into the dispatch system, dimension validation, and comprehensive testing. The PR description provides clear context about the implementation approach, performance considerations, and compatibility details, offering sufficient substance to generate meaningful questions about kernel design, tensor operations, and backend integration patterns.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:30.222394"
   },
   {
     "pr_number": 16792,
@@ -1571,13 +1501,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:31.013317",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds meaningful functionality to support array references in JSON schema-to-grammar conversion, fixing a specific bug with recursive schema definitions. The changes involve non-trivial logic for parsing JSON pointers, handling array indexing, and refactoring reference naming schemes across multiple implementations (C++, Python, JavaScript), providing substantial material for understanding schema resolution mechanisms.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:31.013317"
   },
   {
     "pr_number": 16784,
@@ -1649,13 +1573,7 @@
       }
     ],
     "num_files": 7,
-    "scraped_at": "2025-11-16T23:29:32.167658",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial logic changes across multiple components to implement auto-refresh of server properties on inference start, with meaningful architectural decisions about when and how to fetch data, handle caching, and synchronize model metadata. The description provides clear context about the problem being solved and the changes made, with multiple files modified to handle model metadata syncing, concurrent fetch prevention, and fallback logic.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:32.167658"
   },
   {
     "pr_number": 16774,
@@ -1703,13 +1621,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:33.588230",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR introduces substantive CPU feature detection for s390x architecture with conditional compilation logic, new build variants, and platform-specific hardware capability checking. It involves meaningful architectural decisions about backend loading, feature flagging, and would require developers to understand the codebase's build system and CPU feature abstraction layer.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:33.588230"
   },
   {
     "pr_number": 16769,
@@ -1773,13 +1685,7 @@
       }
     ],
     "num_files": 6,
-    "scraped_at": "2025-11-16T23:29:33.850051",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial performance optimization that fuses ROPE+VIEW+SET_ROWS operations in Vulkan shaders. It involves meaningful architectural decisions (new shader variants, pipeline management, operation ordering), algorithm changes (destination address calculation based on row indices), and adds new infrastructure (fused_ops_write_mask). The PR description clearly explains the pattern being optimized and why, with measurable performance improvements.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:33.850051"
   },
   {
     "pr_number": 16764,
@@ -1843,13 +1749,7 @@
       }
     ],
     "num_files": 6,
-    "scraped_at": "2025-11-16T23:29:34.670389",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds support for a new multimodal OCR model (LightOnOCR-1B) with non-trivial architectural decisions. It involves conditional logic for handling vision encoders, understanding projector types, and managing vision model parameter initialization\u2014requiring developers to understand how multimodal models are integrated into the codebase. The changes span multiple layers (Python conversion, C++ inference, test infrastructure) with meaningful implementation decisions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:34.670389"
   },
   {
     "pr_number": 16763,
@@ -1897,13 +1797,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:34.949314",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds non-trivial tool handling functionality for the LFM2 model with specific system prompt formatting logic, JSON schema constraint handling, and model-specific chat template integration. The changes involve meaningful architectural decisions about how tools are rendered and how the model interprets them, providing substantial technical content for meaningful codebase questions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:34.949314"
   },
   {
     "pr_number": 16746,
@@ -1959,13 +1853,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:29:37.469312",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR fixes a critical consistency issue in the KV cache and memory management by ensuring well-defined ordering when iterating over buffer type to context maps. The changes involve non-trivial logic improvements (adding comparators, refactoring data structures, and fixing iteration order issues) that could lead to incorrect results if not properly understood. A developer would need to comprehend the relationship between buffer types, contexts, and the importance of deterministic iteration order to work on related memory management features.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:37.469312"
   },
   {
     "pr_number": 16736,
@@ -2077,13 +1965,7 @@
       }
     ],
     "num_files": 12,
-    "scraped_at": "2025-11-16T23:29:39.328547",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a significant architectural change to support unified KV cache across parallel slots in the server, involving modifications to context parameter handling, memory management, and slot scheduling logic. The changes include new API functions, conditional logic for unified vs. per-sequence caching, slot purging mechanisms, and corresponding test updates that demonstrate non-trivial technical decisions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:39.328547"
   },
   {
     "pr_number": 16715,
@@ -2187,13 +2069,7 @@
       }
     ],
     "num_files": 11,
-    "scraped_at": "2025-11-16T23:29:41.821496",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements substantial CUDA kernel fusion optimizations for GEMV operations (GLU, Bias+GLU, Bias) with meaningful performance improvements (3-8% speedup). The code changes involve complex template-based kernel modifications, fusion argument passing through multiple layers, and strategic kernel splitting to manage compile times\u2014all of which represent significant technical decisions that would be valuable for developers to understand.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:41.821496"
   },
   {
     "pr_number": 16700,
@@ -2257,13 +2133,7 @@
       }
     ],
     "num_files": 6,
-    "scraped_at": "2025-11-16T23:29:43.480902",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR fixes a real bug in interpolation logic involving division by zero when spatial dimensions are 1, affecting multiple backends (CPU, CUDA, OpenCL, Vulkan). The fix involves meaningful code changes with conditional logic, shader modifications, and test cases that demonstrate understanding of the codebase's interpolation and scaling mechanisms.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:43.480902"
   },
   {
     "pr_number": 16665,
@@ -2311,13 +2181,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:47.030482",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial ROLL operator for the SYCL backend with multi-dimensional tensor support, parallel processing patterns, and GPU memory optimization. The description provides clear context about implementation details (4D tensor support, shift normalization, modular arithmetic), and there's sufficient complexity in the kernel logic to generate meaningful questions about how the operation works and integrates with the existing SYCL pipeline.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:47.030482"
   },
   {
     "pr_number": 16649,
@@ -2365,13 +2229,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:50.232954",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds meaningful algorithmic optimization for a GPU kernel (topk-moe) by introducing optional delayed softmax support for GPT-OSS models. It contains substantial logic changes including new CUDA implementations, parameter additions, and test coverage, with clear performance benefits demonstrated. A developer would need to understand the MoE (Mixture of Experts) computation flow and CUDA optimization tradeoffs to work with this code.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:50.232954"
   },
   {
     "pr_number": 16641,
@@ -2419,13 +2277,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:52.352949",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a non-trivial GPU shader for Vulkan (topk_moe) that was ported from CUDA, including algorithmic changes for handling different subgroup sizes without shared memory. The PR adds meaningful logic with observable performance improvements, involving shader compilation, pipeline configuration, and operator integration.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:52.352949"
   },
   {
     "pr_number": 16634,
@@ -2473,13 +2325,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:29:53.546939",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements significant non-trivial changes to Metal GPU support, including reworking matrix multiplication operations, adding Tensor API support for Metal4, and introducing new library initialization functions. The changes involve architectural decisions about GPU capability detection, conditional compilation, and performance optimization that would provide meaningful technical questions about GPU compute implementations.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:53.546939"
   },
   {
     "pr_number": 16619,
@@ -2559,13 +2405,7 @@
       }
     ],
     "num_files": 8,
-    "scraped_at": "2025-11-16T23:29:55.236790",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial UX/UI refactoring that relocates import/export functionality to a Settings Dialog and introduces new components (ConversationSelectionDialog, ImportExportTab) with meaningful logic for conversation selection, filtering, and batch operations. The changes involve architectural decisions about component organization and data flow that would help developers understand how the import/export feature works.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:55.236790"
   },
   {
     "pr_number": 16618,
@@ -2677,13 +2517,7 @@
       }
     ],
     "num_files": 12,
-    "scraped_at": "2025-11-16T23:29:55.481447",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a complete feature for visualizing and persisting tool-call streaming in the chat UI. It involves non-trivial changes across multiple components (state management, message rendering, API types, settings), demonstrates how tool-call data flows through the system, and includes UI logic for parsing, displaying, and persisting tool call payloads. There's substantial technical substance around streaming data handling, JSON parsing with fallbacks, and component integration.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:55.481447"
   },
   {
     "pr_number": 16613,
@@ -2755,13 +2589,7 @@
       }
     ],
     "num_files": 7,
-    "scraped_at": "2025-11-16T23:29:56.360911",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds implementation of four mathematical unary operators (FLOOR, CEIL, ROUND, TRUNC) to the SYCL backend with kernel implementations, function declarations, and comprehensive test coverage. It involves non-trivial code additions across multiple files including kernel implementations and dispatch logic, providing sufficient substance to generate meaningful questions about operator implementation, SYCL kernel patterns, and backend architecture.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:29:56.360911"
   },
   {
     "pr_number": 16602,
@@ -2817,13 +2645,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:29:57.462850",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR introduces substantial new kernel implementations (gemm_moe_mxfp4_f32 and gemv_moe_mxfp4_f32) with accompanying transposed conversion kernels for MoE optimization on Adreno GPUs. The changes involve non-trivial OpenCL kernel code with specific algorithmic optimizations (SIMDGROUP parallelization, mxfp4 format handling, tensor transposition logic) and meaningful architectural decisions around data layout and preprocessing. The PR description provides clear context about the performance improvements and design choices.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:29:57.462850"
   },
   {
     "pr_number": 16576,
@@ -2871,13 +2693,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:30:00.892780",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains meaningful technical changes to replace Metal's unavailable gpuAddress property with an atomic counter-based virtual addressing system. The changes involve synchronization primitives, memory management strategy, and GPU kernel modifications, providing sufficient substance for generating questions about virtual memory allocation, atomic operations, and GPU buffer management.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:30:00.892780"
   },
   {
     "pr_number": 16559,
@@ -2933,13 +2749,7 @@
       }
     ],
     "num_files": 5,
-    "scraped_at": "2025-11-16T23:30:02.210250",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains non-trivial performance optimization changes to the `GGML_OP_SUM` operation with detailed context about the implementation strategy, including multi-threaded dispatch, SIMD operations, and memory reduction patterns. The changes span multiple backend implementations (Metal, CUDA) and include kernel-level optimizations that involve meaningful algorithmic decisions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:30:02.210250"
   },
   {
     "pr_number": 16542,
@@ -3019,13 +2829,7 @@
       }
     ],
     "num_files": 8,
-    "scraped_at": "2025-11-16T23:30:04.871521",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR implements a Metal-based GPU operation (CONV_TRANSPOSE_2D) with non-trivial kernel code, parameter handling, and device capability checks. It involves understanding convolution transpose operations, GPU memory management, and shader programming, providing substantial technical depth for generating meaningful questions about the implementation.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:30:04.871521"
   },
   {
     "pr_number": 16539,
@@ -3097,13 +2901,7 @@
       }
     ],
     "num_files": 7,
-    "scraped_at": "2025-11-16T23:30:05.675227",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds meaningful Metal backend support for the OPT_STEP_SGD optimizer operator, including kernel implementation, argument structures, and operation dispatch logic. While it follows a similar pattern to the existing OPT_STEP_ADAMW implementation, it contains sufficient technical substance around GPU kernel design, buffer management, and threadgroup dispatch that would help developers understand how optimizer operations are implemented in the Metal backend.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:30:05.675227"
   },
   {
     "pr_number": 16536,
@@ -3263,13 +3061,7 @@
       }
     ],
     "num_files": 18,
-    "scraped_at": "2025-11-16T23:30:05.974576",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial architectural changes to GPU shader computation, refactoring the MMQ (matrix multiplication) caching structure and adding support for K-Quant types. The changes involve meaningful algorithmic modifications (moving quantization timing from load to pre-dot operations), performance optimizations (shared memory/register tradeoffs), and multi-file coordination across Vulkan pipeline configurations and shader implementations.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:30:05.974576"
   },
   {
     "pr_number": 16531,
@@ -3317,13 +3109,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:30:06.550085",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds meaningful new functionality by enabling Metal Flash Attention kernels for F32 K and V with head size 32 support, including kernel template instantiations and device capability checks. The changes involve concrete logic additions (new kernel variants, type definitions, device support validation) that would help developers understand how Metal acceleration handles different data types and configurations.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:30:06.550085"
   },
   {
     "pr_number": 16529,
@@ -3395,13 +3181,7 @@
       }
     ],
     "num_files": 7,
-    "scraped_at": "2025-11-16T23:30:06.873582",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR adds non-trivial GPU kernel implementations for two operators (OPT_STEP_ADAMW and SUM) in the Metal backend, involving kernel code, device support checks, and proper integration across multiple files. There is sufficient technical substance to generate meaningful questions about GPU kernel implementation, operator dispatch, and Metal backend architecture.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:30:06.873582"
   },
   {
     "pr_number": 16528,
@@ -3449,13 +3229,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:30:07.278894",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains substantial logic changes for supporting cacheless embeddings with Flash Attention and iSWA. The modifications involve refactoring attention mask generation, enabling new code paths for cacheless models, and fixing architectural support issues. These changes require understanding attention mechanisms, mask generation logic, and model architecture decisions.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:30:07.278894"
   },
   {
     "pr_number": 16526,
@@ -3503,13 +3277,7 @@
       }
     ],
     "num_files": 4,
-    "scraped_at": "2025-11-16T23:30:07.553901",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR addresses a non-trivial bug in Unicode escape sequence handling during streaming JSON parsing. It implements specific logic with regex patterns and surrogate pair handling that requires understanding how partial JSON streams work, making it suitable for generating meaningful technical questions about the implementation.",
-      "substance_level": "high"
-    }
+    "scraped_at": "2025-11-16T23:30:07.553901"
   },
   {
     "pr_number": 16521,
@@ -3629,12 +3397,6 @@
       }
     ],
     "num_files": 13,
-    "scraped_at": "2025-11-16T23:30:08.149059",
-    "repository": "ggml-org_llama.cpp",
-    "filter_decision": {
-      "accept": true,
-      "reasoning": "This PR contains meaningful bug fixes for three SYCL backend operations (count-equal, argsort, pad) with new implementation files, refactored code structure, and updates to operation support matrices. The changes involve non-trivial kernel implementations and architectural reorganization that would benefit from developer understanding.",
-      "substance_level": "medium"
-    }
+    "scraped_at": "2025-11-16T23:30:08.149059"
   }
 ]

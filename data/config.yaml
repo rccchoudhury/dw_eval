@@ -7,14 +7,11 @@ github:
 
 # Target repositories
 repositories:
-  - owner: "huggingface"
-    name: "transformers"
-    enabled: true
   - owner: "Dao-AILab"
     name: "flash-attention"
     enabled: true
-  - owner: "huggingface"
-    name: "diffusers"
+  - owner: "karpathy"
+    name: "nanogpt"
     enabled: true
   - owner: "ggml-org"
     name: "llama.cpp"
@@ -22,8 +19,8 @@ repositories:
 
 # PR filtering criteria
 pr_filters:
-  min_files_changed: 4
-  max_files_changed: 20
+  min_files_changed: 2
+  max_files_changed: 8
   require_description: true
   min_description_length: 50
   state: "closed"  # Only fetch closed/merged PRs

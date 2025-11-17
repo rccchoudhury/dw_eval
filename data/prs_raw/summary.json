@@ -1,18 +1,15 @@
 {
-  "scraped_at": "2025-11-16T21:19:56.987915",
+  "scraped_at": "2025-11-16T23:30:08.193919",
   "repositories": {
-    "huggingface/transformers": {
-      "count": 50
-    },
     "Dao-AILab/flash-attention": {
       "count": 15
     },
-    "huggingface/diffusers": {
-      "count": 39
-    },
-    "ffmpeg/ffmpeg": {
+    "karpathy/nanogpt": {
       "count": 0
+    },
+    "ggml-org/llama.cpp": {
+      "count": 50
     }
   },
-  "total_prs": 104
+  "total_prs": 65
 }
