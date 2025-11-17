@@ -11,7 +11,7 @@ The "interview" code goes up to 4fb9b5ee58d39d4823cd4935fd0ab842d3ac335d. All wo
 This pipeline creates evaluation test cases by:
 1. Scraping substantive PRs from GitHub repositories
 2. Filtering PRs for technical depth and quality
-3. Generating codebase questions using Claude AI
+3. Generating codebase questions using Claude
 4. Extracting atomic facts for evaluation
 5. Collecting system answers (via Claude Code + MCP)
 6. Evaluating answers using an LLM-as-judge approach
@@ -222,46 +222,7 @@ python3 generate_facts.py data/questions/huggingface_transformers_questions.json
 ---
 
 ### 5. Generating Responses: DeepWiki Querying
-
-**Goal:** Populate the `deepwiki_answer` field for each test case.
-
-#### **Option A: Programmatic MCP (Recommended)**
-
-Use the automated MCP script to query DeepWiki via Claude API:
-
-```bash
-python3 query_deepwiki_mcp.py data/questions_with_facts/test_cases.json
-
-# With custom output file
-python3 query_deepwiki_mcp.py data/questions_with_facts/test_cases.json \
-  -o data/questions_with_facts/results.json
-
-# Process only first 5 questions (for testing)
-python3 query_deepwiki_mcp.py data/questions_with_facts/test_cases.json -n 5
-```
-
-**Requirements:**
-- `pip install anthropic mcp`
-- `npm install -g @deepwiki/mcp-server`
-- `export ANTHROPIC_API_KEY="your-key"`
-
-**See:** `MCP_SETUP.md` for detailed setup instructions.
-
-#### **Option B: Manual Claude Code UI**
-
-Use Claude Code's built-in MCP support:
-1. Open Claude Code terminal with DeepWiki MCP configured
-2. Load test cases and use `query_deepwiki.py` helper functions
-3. Manually query each question:
-   ```
-   deepwiki - ask_question(repoName: "owner/repo", question: "...")
-   ```
-4. Populate `deepwiki_answer` field and save
-
-#### **Option C: Any Other System**
-
-You can use any AI system - just populate the `deepwiki_answer` field with responses.
-
+For now, done manually with claude code UI. need to find faster way to do this..
 ---
 
 ### 6. Grading Questions: LLM-as-Judge Evaluation
@@ -401,11 +362,7 @@ python3 generate_facts.py data/questions/Dao-AILab_flash-attention_questions.jso
 # Output: data/questions_with_facts/{owner}_{repo}_test_cases.json
 
 # 6. Query DeepWiki using MCP (run for each repository)
-python3 query_deepwiki_mcp.py \
-  data/questions_with_facts/huggingface_transformers_test_cases.json
-python3 query_deepwiki_mcp.py \
-  data/questions_with_facts/Dao-AILab_flash-attention_test_cases.json
-# ... repeat for other repos
+# done manually with claude code...
 # Output: data/questions_with_facts/{owner}_{repo}_test_cases_with_answers.json
 
 # 7. Evaluate (run for each repository)
