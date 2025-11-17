@@ -27,21 +27,25 @@ export ANTHROPIC_API_KEY=your_anthropic_key
 
 ### 1. Finding PRs: Scraping GitHub
 
-The scraper fetches merged PRs from specified repositories with quality filters to ensure substantive code changes.
+The scraper fetches merged PRs from multiple GitHub repositories (configured in `data/config.yaml`) with quality filters to ensure substantive code changes.
 
 **What it does:**
-- Fetches merged PRs from configured repositories
+- Fetches merged PRs from all configured repositories in `data/config.yaml`
+- Processes each repository independently with checkpointing
 - Checks up to 500 PRs per repository (stops early if PRs become too old)
 - Filters by file count (4-20 files changed)
 - Excludes trivial changes (docs, configs, tests-only)
 - Captures full PR metadata and git patches
-- Supports incremental scraping with checkpointing
+- Creates separate output directory for each repository
 
-**Configuration:** Edit `data/config.yaml`
+**Configuration:** Edit `data/config.yaml` to add/remove repositories
 ```yaml
 repositories:
   - owner: huggingface
     name: transformers
+  - owner: Dao-AILab
+    name: flash-attention
+  # Add more repositories here
     
 pr_filters:
   min_files_changed: 4
@@ -57,7 +61,12 @@ max_prs_per_repo: 50
 python3 scrape_prs.py
 ```
 
-**Output:** `data/prs_raw/huggingface_transformers/prs.json`
+**Output:** `data/prs_raw/{owner}_{repo}/prs.json` for each configured repository
+
+Example outputs:
+- `data/prs_raw/huggingface_transformers/prs.json`
+- `data/prs_raw/Dao-AILab_flash-attention/prs.json`
+- `data/prs_raw/summary.json` - Summary of all scraped repos
 
 ---
 
@@ -208,20 +217,46 @@ python3 generate_facts.py data/questions/huggingface_transformers_questions.json
 
 ---
 
-### 5. Generating Responses: Claude Code + MCP
+### 5. Generating Responses: DeepWiki Querying
 
-**Manual Step:** Use your AI system to answer each question.
+**Goal:** Populate the `deepwiki_answer` field for each test case.
 
-For Claude Code with DeepWiki MCP integration:
-1. Load the test cases JSON file
-2. For each question, query DeepWiki using the MCP tool:
+#### **Option A: Programmatic MCP (Recommended)**
+
+Use the automated MCP script to query DeepWiki via Claude API:
+
+```bash
+python3 query_deepwiki_mcp.py data/questions_with_facts/test_cases.json
+
+# With custom output file
+python3 query_deepwiki_mcp.py data/questions_with_facts/test_cases.json \
+  -o data/questions_with_facts/results.json
+
+# Process only first 5 questions (for testing)
+python3 query_deepwiki_mcp.py data/questions_with_facts/test_cases.json -n 5
+```
+
+**Requirements:**
+- `pip install anthropic mcp`
+- `npm install -g @deepwiki/mcp-server`
+- `export ANTHROPIC_API_KEY="your-key"`
+
+**See:** `MCP_SETUP.md` for detailed setup instructions.
+
+#### **Option B: Manual Claude Code UI**
+
+Use Claude Code's built-in MCP support:
+1. Open Claude Code terminal with DeepWiki MCP configured
+2. Load test cases and use `query_deepwiki.py` helper functions
+3. Manually query each question:
    ```
-   deepwiki - ask_question(repoName: "huggingface/transformers", question: "...")
+   deepwiki - ask_question(repoName: "owner/repo", question: "...")
    ```
-3. Collect the response and populate the `deepwiki_answer` field
-4. Save the updated JSON file
+4. Populate `deepwiki_answer` field and save
 
-**Alternative:** You can use any system - just populate the `deepwiki_answer` field with your system's responses.
+#### **Option C: Any Other System**
+
+You can use any AI system - just populate the `deepwiki_answer` field with responses.
 
 ---
 
@@ -359,13 +394,21 @@ python3 generate_questions.py data/prs_raw/all_prs_filtered.json --n_prs 10
 python3 generate_facts.py data/questions/huggingface_transformers_questions.json --n_prs 5
 python3 generate_facts.py data/questions/Dao-AILab_flash-attention_questions.json --n_prs 5
 # ... repeat for other repos
+# Output: data/questions_with_facts/{owner}_{repo}_test_cases.json
 
-# 6. Answer questions with your system
-#    (populate deepwiki_answer field in test_cases.json)
+# 6. Query DeepWiki using MCP (run for each repository)
+python3 query_deepwiki_mcp.py \
+  data/questions_with_facts/huggingface_transformers_test_cases.json
+python3 query_deepwiki_mcp.py \
+  data/questions_with_facts/Dao-AILab_flash-attention_test_cases.json
+# ... repeat for other repos
+# Output: data/questions_with_facts/{owner}_{repo}_test_cases_with_answers.json
 
 # 7. Evaluate (run for each repository)
 python3 evaluate_generic.py \
-  data/questions_with_facts/huggingface_transformers_test_cases.json
+  data/questions_with_facts/huggingface_transformers_test_cases_with_answers.json \
+  deepwiki_answer
+# Output: evaluation_report.txt and evaluation_report.json
 ```
 
 ---
@@ -374,21 +417,30 @@ python3 evaluate_generic.py \
 
 ```
 deepwiki_eval/
-├── README.md                          # This file
-├── PIPELINE.md                        # Detailed pipeline documentation
+├── README.md                          # Main documentation
+├── PIPELINE.md                        # Detailed pipeline docs
+├── MCP_SETUP.md                       # DeepWiki MCP setup guide
+├── requirements.txt                   # Python dependencies
 │
 ├── scrape_prs.py                      # Step 1: PR scraping
 ├── filter_prs.py                      # Step 2: PR filtering
 ├── generate_questions.py              # Step 3: Question generation
 ├── generate_facts.py                  # Step 4: Fact extraction
+├── query_deepwiki_mcp.py              # Step 5: DeepWiki querying (MCP)
+├── query_deepwiki.py                  # Step 5: Helper for manual querying
 ├── evaluate_generic.py                # Step 6: Evaluation
 │
+├── src/
+│   ├── github_api.py                  # GitHub API client
+│   └── __init__.py
+│
 ├── prompts/
-│   ├── pr_filter.txt                  # PR filtering criteria
-│   ├── question_generation_system.txt # Question generation guidelines
-│   ├── question_generation_user.txt   # Question generation template
-│   ├── fact_generation_system.txt     # Fact extraction guidelines
-│   ├── fact_generation_user.txt       # Fact extraction template
+│   ├── pr_filter_system.txt           # PR filtering system prompt
+│   ├── pr_filter_user.txt             # PR filtering user prompt
+│   ├── question_generation_system.txt # Question gen system prompt
+│   ├── question_generation_user.txt   # Question gen user prompt
+│   ├── fact_generation_system.txt     # Fact extraction system prompt
+│   ├── fact_generation_user.txt       # Fact extraction user prompt
 │   └── evaluation_prompt.txt          # Evaluation rubric
 │
 └── data/
@@ -398,20 +450,18 @@ deepwiki_eval/
     │   ├── all_prs_rejected.json      # Combined rejected PRs
     │   ├── all_prs_filter_summary.json # Filter summary by repo
     │   ├── summary.json               # Scraping summary
-    │   ├── huggingface_transformers/
+    │   ├── {owner}_{repo}/
     │   │   ├── prs.json               # Raw scraped PRs
     │   │   └── checkpoint.json        # Scraping progress
-    │   ├── Dao-AILab_flash-attention/
-    │   │   ├── prs.json
-    │   │   └── checkpoint.json
-    │   └── ... (other repos)
+    │   └── ... (one per repo)
     ├── questions/
-    │   ├── huggingface_transformers_questions.json
-    │   └── ... (per repo)
+    │   ├── {owner}_{repo}_questions.json
+    │   └── ... (one per repo)
     └── questions_with_facts/
-        ├── huggingface_transformers_questions_with_facts.json
-        ├── huggingface_transformers_test_cases.json
-        └── ... (per repo)
+        ├── {owner}_{repo}_questions_with_facts.json
+        ├── {owner}_{repo}_test_cases.json
+        ├── {owner}_{repo}_test_cases_with_answers.json
+        └── ... (one set per repo)
 ```
 
 ---

@@ -1,6 +1,7 @@
 # Core dependencies for DeepWiki evaluation
 anthropic>=0.18.0
 datasets>=2.14.0
+mcp>=1.0.0
 
 # Dependencies for question generation pipeline
 requests>=2.31.0
