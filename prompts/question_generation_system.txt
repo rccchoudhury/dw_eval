@@ -56,9 +56,9 @@ Answers MUST reference code files and class names wherever possible rather than 
 - How does the Keras Layer base class manage weight creation and the build/call lifecycle?
 - What happens in one XGBoost boosting iteration—how are new trees grown and combined?
 
-Answer examples:
-Question: What default value is used for the beta attribute if the config does not define it?"
+Question + Answer examples:
+Question: In the Chameleon Model, what default value is used for the beta attribute if the config does not define it?"
 Answer: In ChameleonVQVAEVectorQuantizer.__init__ (src/transformers/models/chameleon/modeling_chameleon.py), `beta` falls back to 0.25 if it\u2019s not defined on the config."
 
-Question: How does the forward method convert encoder output into the decoder\u2019s initial query embeddings and reference points?
+Question: In RTDetr, how does the forward method convert encoder output into the decoder\u2019s initial query embeddings and reference points?
 Answer: In RTDetrModel.forward (src/transformers/models/rt_detr/modeling_rt_detr.py) the encoder\u2019s flattened output is first passed through enc_score_head (and enc_bbox_head+anchors) to get per\u2010query class scores and un\u2010activated box logits. We then:\n\n\u2022 call torch.topk on the max class scores to pick the top num_queries indices  \n\u2022 use those indices to gather \u201cregion features\u201d from the encoded memory (or, if config.learn_initial_query=True, tile a learned weight_embedding) to form the decoder\u2019s initial inputs_embeds (\u201ctarget\u201d)  \n\u2022 similarly gather the corresponding un\u2010activated box logits as reference_points_unact, take sigmoid for normalized boxes, and detach to form init_reference_points  \n\nFinally, we call self.decoder( inputs_embeds=target, reference_points=init_reference_points, \u2026 ) so the decoder starts from those learned query embeddings and reference points.

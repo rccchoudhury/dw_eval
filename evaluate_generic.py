@@ -507,11 +507,64 @@ def generate_report(test_cases, output_file, prompt_file):
         report_lines.append("-" * 80)
         report_lines.append("")
     
-    # Write report
+    # Write text report
     report_text = "\n".join(report_lines)
     
     with open(output_file, 'w') as f:
         f.write(report_text)
+    
+    # Save JSON results
+    json_output_file = output_file.replace('.txt', '.json')
+    json_results = {
+        "summary": {
+            "total_test_cases": len(test_cases),
+            "completed": total_completed,
+            "errors": total_errors,
+            "average_score": avg_score,
+            "average_raw_score": avg_raw_score,
+            "average_factual_correctness": avg_factual,
+            "average_fact_coverage": avg_coverage,
+            "average_specificity": avg_specificity,
+            "specificity_na_count": specificity_na_count,
+            "average_facts_covered": avg_facts_covered
+        },
+        "breakdown": {
+            "by_difficulty": {k: {"count": len(v), "avg_score": sum(v)/len(v)} for k, v in by_difficulty.items()},
+            "by_type": {k: {"count": len(v), "avg_score": sum(v)/len(v)} for k, v in by_type.items()},
+            "by_scope": {k: {"count": len(v), "avg_score": sum(v)/len(v)} for k, v in by_scope.items()}
+        },
+        "results": []
+    }
+    
+    # Add individual results
+    for e in evaluations:
+        tc = e['test_case']
+        ev = e['evaluation']
+        
+        result = {
+            "id": tc['id'],
+            "question": tc['question'],
+            "ground_truth": tc['ground_truth'],
+            "system_answer": tc['system_answer'],
+            "facts": tc['facts'],
+            "metadata": tc['metadata'],
+            "evaluation": {
+                "score": ev.get('score', 0),
+                "raw_score": ev.get('raw_score', 0),
+                "factual_correctness": ev.get('factual_correctness', 0),
+                "fact_coverage": ev.get('fact_coverage', 0),
+                "specificity": ev.get('specificity', 0),
+                "specificity_na": ev.get('specificity_na', False),
+                "facts_covered": ev.get('facts_covered', 0),
+                "total_facts": ev.get('total_facts', 0),
+                "analysis": ev.get('analysis', ''),
+                "error": ev.get('error', False)
+            }
+        }
+        json_results["results"].append(result)
+    
+    with open(json_output_file, 'w') as f:
+        json.dump(json_results, f, indent=2)
     
     # Print summary to console - find the sections to print
     best_worst_start = None
@@ -534,6 +587,7 @@ def generate_report(test_cases, output_file, prompt_file):
         print("\n".join(report_lines[:40]))
     
     print(f"\nFull report saved to: {output_file}")
+    print(f"JSON results saved to: {json_output_file}")
 
 
 def main():

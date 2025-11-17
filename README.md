@@ -286,17 +286,51 @@ python3 evaluate_generic.py data/questions_with_facts/test_cases.json my_system_
 python3 evaluate_generic.py data/questions_with_facts/test_cases.json deepwiki_answer my_report.txt
 ```
 
-**Output:** `evaluation_report.txt`
+**Outputs:**
+- `evaluation_report.txt` - Human-readable text report with detailed analysis
+- `evaluation_report.json` - Machine-readable JSON with all scoring data
 
 **Report Contents:**
-- Overall statistics (mean, median, std dev)
-- Score distribution by quartile
-- Per-question breakdown with:
-  - Final score and raw score
-  - Individual metric scores (F, C, S)
-  - Question metadata (difficulty, scope)
+- **Overall statistics:** Average scores, completion rate, error count
+- **Best and worst scoring questions:** Top 2 best and worst performers with analysis
+- **Breakdown by metadata:** Scores grouped by difficulty, type, and scope
+- **Per-question breakdown:**
+  - Final score (0-1) and raw score (0-40)
+  - Individual metric scores: Factual Correctness, Fact Coverage, Specificity
+  - Question metadata (difficulty, scope, type)
   - Full question, ground truth, and system answer
-  - Detailed analysis and reasoning
+  - Detailed analysis and reasoning from Claude
+
+**JSON Output Structure:**
+```json
+{
+  "summary": {
+    "total_test_cases": 50,
+    "completed": 48,
+    "average_score": 0.823,
+    "average_factual_correctness": 8.5,
+    "average_fact_coverage": 7.8,
+    "average_specificity": 8.2
+  },
+  "breakdown": {
+    "by_difficulty": {...},
+    "by_type": {...}
+  },
+  "results": [
+    {
+      "id": "uuid",
+      "question": "...",
+      "evaluation": {
+        "score": 0.875,
+        "factual_correctness": 9.0,
+        "fact_coverage": 8.0,
+        "specificity": 9.0,
+        "analysis": "..."
+      }
+    }
+  ]
+}
+```
 
 ---
 
