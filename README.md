@@ -2,6 +2,8 @@
 
 A comprehensive system for generating high-quality codebase questions from GitHub PRs and evaluating AI-powered code search systems.
 
+The "interview" code goes up to 4fb9b5ee58d39d4823cd4935fd0ab842d3ac335d. All work after that can be considered as "extra".
+ 
 ## Overview
 
 This pipeline creates evaluation test cases by:
