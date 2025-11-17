@@ -2,8 +2,10 @@
 
 A comprehensive system for generating high-quality codebase questions from GitHub PRs and evaluating AI-powered code search systems.
 
+Slides: https://docs.google.com/presentation/d/19-nvvfzWrazZqHW2kVTeKE0YHq0CG70soJkiPYZFyw0/edit?usp=sharing
+Loom: https://www.loom.com/share/c10796e7f182418d9e8e86e0bfee6435
 The "interview" code goes up to 4fb9b5ee58d39d4823cd4935fd0ab842d3ac335d. All work after that can be considered as "extra".
- 
+
 ## Overview
 
 This pipeline creates evaluation test cases by:
